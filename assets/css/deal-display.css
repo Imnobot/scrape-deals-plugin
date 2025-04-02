@@ -1,0 +1,534 @@
+/* Basic Styling for the Deal Scraper Display */
+
+.dsp-container {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif; /* Use WP admin-like font stack */
+    border: 1px solid #ccd0d4; /* WP admin border color */
+    padding: 15px;
+    margin-bottom: 20px;
+    background-color: #f6f7f7; /* WP admin background */
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+}
+
+/* Filters */
+.dsp-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px 20px; /* Row gap, Column gap */
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #e5e5e5; /* WP separator color */
+}
+
+.dsp-filter-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.dsp-filter-item label {
+    font-weight: 600; /* Slightly bolder */
+    margin-right: 5px;
+    white-space: nowrap;
+    color: #2c3338; /* WP text color */
+}
+.dsp-filter-item input[type="text"] {
+    padding: 6px 8px; /* WP input padding */
+    border: 1px solid #8c8f94; /* WP input border */
+    border-radius: 3px;
+    min-width: 220px;
+    background-color: #fff;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,.07);
+    font-size: 14px; /* WP input font size */
+}
+.dsp-filter-item input[type="checkbox"] {
+    margin-right: 3px;
+    vertical-align: middle; /* Align checkbox better */
+}
+
+.dsp-filter-checkboxes {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.dsp-filter-checkboxes > span { /* "Sources:" label */
+     font-weight: 600;
+     margin-right: 5px;
+     color: #2c3338;
+}
+.dsp-source-label {
+    font-weight: normal;
+    white-space: nowrap;
+    margin-right: 10px;
+    cursor: pointer;
+    display: inline-flex; /* Align checkbox and text better */
+    align-items: center;
+    gap: 4px;
+}
+
+
+/* Buttons & Spinners */
+.dsp-button {
+    display: inline-block;
+    text-decoration: none;
+    font-size: 13px;
+    line-height: 2.15384615; /* WP button line height */
+    min-height: 30px; /* WP button height */
+    margin: 0;
+    padding: 0 10px; /* WP button padding */
+    cursor: pointer;
+    border-width: 1px;
+    border-style: solid;
+    -webkit-appearance: none;
+    border-radius: 3px;
+    white-space: nowrap;
+    box-sizing: border-box;
+    vertical-align: middle;
+
+    /* Primary Button Colors */
+    background: #2271b1; /* WP primary blue */
+    border-color: #2271b1;
+    color: #fff;
+    box-shadow: 0 1px 0 #2271b1;
+}
+.dsp-button:hover, .dsp-button:focus {
+    background: #1d6197;
+    border-color: #1d6197;
+    color: #fff;
+    outline: none;
+}
+.dsp-button:active {
+     background: #185380;
+     border-color: #185380;
+     box-shadow: inset 0 2px 5px -3px rgba(0, 0, 0, 0.5);
+}
+
+.dsp-button:disabled, .dsp-button[disabled] {
+    color: #a7aaad !important;
+    border-color: #dcdcde !important;
+    background: #f6f7f7 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    cursor: default;
+}
+
+
+.dsp-spinner {
+    display: inline-block;
+    visibility: hidden; /* Hide by default, show when needed */
+    background: url(/wp-admin/images/spinner.gif) no-repeat; /* Use WP spinner */
+    background-size: 16px 16px;
+    width: 16px;
+    height: 16px;
+    opacity: .7;
+    filter: alpha(opacity=70);
+    margin-left: 8px;
+    vertical-align: middle;
+}
+/* Show spinner when sibling button is disabled */
+.dsp-button:disabled + .dsp-spinner {
+    visibility: visible;
+}
+
+
+.dsp-refresh-status {
+     margin-left: 10px;
+     font-size: 0.9em;
+     vertical-align: middle;
+     font-style: italic;
+}
+.dsp-refresh-status.dsp-success { color: #008000; } /* Green */
+.dsp-refresh-status.dsp-error { color: #d63638; } /* WP error red */
+
+
+/* Debug Controls */
+.dsp-debug-controls {
+    margin-top: 10px;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e5e5e5;
+}
+
+/* Secondary Button Style (for debug toggle) */
+.dsp-button-secondary {
+    background: #f6f7f7;
+    border-color: #dcdcde;
+    color: #50575e;
+    box-shadow: none;
+    font-size: 13px; /* Match primary button size */
+    line-height: 2.15384615;
+    min-height: 30px;
+    padding: 0 10px;
+}
+.dsp-button-secondary:hover, .dsp-button-secondary:focus {
+    background: #f0f0f1;
+    border-color: #b4b9be;
+    color: #1d2327;
+}
+.dsp-button-secondary:active {
+     background: #e8e9ea;
+     border-color: #b4b9be;
+     box-shadow: inset 0 2px 5px -3px rgba(0, 0, 0, 0.5);
+}
+
+/* Debug Log Container */
+#dsp-debug-log-container {
+    border: 1px dashed #ccd0d4;
+    padding: 10px 15px;
+    margin-top: 10px;
+    margin-bottom: 15px;
+    background-color: #fff; /* White background for contrast */
+    max-height: 400px;
+    overflow-y: auto;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,.07);
+}
+
+#dsp-debug-log-container h4 {
+    margin-top: 0;
+    margin-bottom: 8px;
+    font-size: 14px; /* Slightly larger heading */
+    font-weight: 600;
+    color: #1d2327; /* WP heading color */
+}
+
+#dsp-debug-log {
+    font-family: monospace;
+    font-size: 12px;
+    line-height: 1.4;
+    color: #3c434a; /* Darker grey for log text */
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+
+/* Status Bar */
+.dsp-status-bar {
+    margin-bottom: 10px;
+    font-size: 0.9em;
+    color: #50575e; /* WP text secondary color */
+    padding: 5px 0;
+    overflow: hidden;
+    line-height: 1.4;
+}
+#dsp-last-updated {
+    color: #7e8993; /* Lighter grey */
+}
+
+
+/* Table Styling */
+.dsp-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    font-size: 13px; /* WP standard table font size */
+    background-color: #fff;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+    border: 1px solid #ccd0d4;
+    clear: both;
+}
+
+.dsp-table th,
+.dsp-table td {
+    border-bottom: 1px solid #e5e5e5; /* Separator */
+    padding: 8px 10px; /* WP table padding */
+    text-align: left;
+    vertical-align: top;
+    line-height: 1.4;
+}
+.dsp-table td {
+     color: #2c3338;
+}
+
+
+.dsp-table thead th {
+    background-color: #f6f7f7;
+    font-weight: 600;
+    cursor: pointer;
+    position: relative;
+    white-space: nowrap;
+    padding: 10px; /* Slightly more padding for headers */
+    border-bottom-width: 1px; /* Ensure bottom border on header */
+    color: #2c3338;
+}
+
+/* Sorting indicators */
+.dsp-table thead th .dsp-sort-indicator { /* Create a dedicated span for the indicator */
+    display: inline-block;
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    opacity: 0.5;
+    margin-left: 6px;
+    vertical-align: middle;
+    border-top: 5px solid #50575e; /* Default arrow pointing down slightly dimmed */
+}
+.dsp-table thead th.dsp-sort-asc .dsp-sort-indicator {
+    border-top: none;
+    border-bottom: 5px solid #2271b1; /* Blue arrow up */
+    opacity: 1;
+}
+.dsp-table thead th.dsp-sort-desc .dsp-sort-indicator {
+    border-top: 5px solid #2271b1; /* Blue arrow down */
+     opacity: 1;
+}
+
+
+.dsp-table tbody tr:hover {
+    background-color: #f0f0f1; /* Lighter hover */
+}
+/* Alternate row background */
+.dsp-table tbody tr.dsp-odd-row {
+    background-color: #fff;
+}
+.dsp-table tbody tr.dsp-even-row {
+    background-color: #f6f7f7;
+}
+
+.dsp-table td a {
+    color: #2271b1;
+    text-decoration: none;
+}
+.dsp-table td a:hover {
+    color: #1d6197;
+    text-decoration: underline;
+}
+
+.dsp-description {
+    display: block;
+    font-size: 0.9em;
+    color: #50575e;
+    margin-top: 3px;
+}
+
+/* Row Highlighting */
+.dsp-new-item {
+    background-color: #fff9e6 !important; /* Light yellow, important to override even/odd */
+}
+.dsp-new-item td {
+    font-weight: 600; /* Make text bolder for new items */
+}
+
+.dsp-lifetime-item td:nth-child(2) a, /* Style title link for lifetime */
+.dsp-lifetime-item td:nth-child(3) { /* Style price cell for lifetime */
+    color: #006400; /* Darker Green */
+    font-weight: 600;
+}
+
+.dsp-loading td, .dsp-error td {
+    text-align: center;
+    color: #7e8993;
+    font-style: italic;
+    padding: 20px;
+}
+.dsp-error td {
+    color: #d63638; /* Red error text */
+}
+
+/* --- Add these styles for the Donate Modal --- */
+
+/* Debug/Donate Controls Alignment */
+.dsp-debug-controls {
+    display: flex;
+    /* Arrange buttons horizontally */
+    gap: 10px;
+    /* Space between buttons */
+    margin-top: 10px;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e5e5e5;
+    flex-wrap: wrap;
+    /* Allow buttons to wrap on small screens */
+}
+
+/* Modal Background Overlay */
+.dsp-modal {
+    display: none;
+    /* Hidden by default */
+    position: fixed;
+    /* Stay in place */
+    z-index: 1050;
+    /* Sit on top - higher than most WP elements */
+    left: 0;
+    top: 0;
+    width: 100%;
+    /* Full width */
+    height: 100%;
+    /* Full height */
+    overflow: auto;
+    /* Enable scroll if needed */
+    background-color: rgba(0, 0, 0, 0.7);
+    /* Black w/ opacity */
+    -webkit-backdrop-filter: blur(3px);
+    /* Optional: blur background */
+    backdrop-filter: blur(3px);
+}
+
+/* Modal Content Box */
+.dsp-modal-content {
+    background-color: #fefefe;
+    margin: 8% auto;
+    /* 8% from the top and centered */
+    padding: 25px 35px;
+    border: 1px solid #dcdcde;
+    width: 90%;
+    /* Could be more or less, depending on screen size */
+    max-width: 750px;
+    /* Maximum width */
+    border-radius: 4px;
+    position: relative;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    animation: dsp-modal-appear 0.3s ease-out;
+    /* Simple appear animation */
+}
+
+@keyframes dsp-modal-appear {
+    from {
+        opacity: 0;
+        transform: translateY(-30px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Modal Close Button */
+.dsp-modal-close {
+    color: #777;
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    font-size: 28px;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.dsp-modal-close:hover,
+.dsp-modal-close:focus {
+    color: #000;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* Modal Header */
+.dsp-modal-content h2 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #1d2327;
+    font-size: 1.5em;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+/* Donate Images Container */
+.dsp-donate-images {
+    display: flex;
+    flex-wrap: wrap;
+    /* Allow wrapping on smaller screens */
+    justify-content: space-around;
+    /* Distribute space */
+    align-items: flex-start;
+    /* Align items to top */
+    gap: 25px;
+    /* Space between items */
+    margin-top: 20px;
+    margin-bottom: 20px;
+}
+
+/* Individual Donate Item (Image + Text) */
+.dsp-donate-item {
+    text-align: center;
+    flex: 1;
+    /* Allow items to grow/shrink */
+    min-width: 180px;
+    /* Minimum width before wrapping */
+    max-width: 220px;
+    /* Maximum width */
+}
+
+.dsp-donate-item p strong {
+    display: block;
+    margin-bottom: 8px;
+    color: #3c434a;
+}
+
+.dsp-donate-item img {
+    max-width: 100%;
+    /* Ensure image fits container */
+    height: auto;
+    border: 1px solid #ddd;
+    padding: 4px;
+    /* Optional padding around QR */
+    background-color: #fff;
+    margin-bottom: 10px;
+}
+
+.dsp-donate-item code {
+    display: block;
+    font-size: 11px;
+    word-wrap: break-word;
+    /* Wrap long addresses */
+    color: #50575e;
+    background-color: #f0f0f1;
+    padding: 5px 8px;
+    border-radius: 3px;
+    margin-top: 5px;
+    line-height: 1.5;
+    text-align: left;
+    /* Align code left for readability */
+}
+
+/* Adjustments for smaller screens */
+@media (max-width: 600px) {
+    .dsp-modal-content {
+        width: 95%;
+        margin: 5% auto;
+        padding: 15px 20px;
+    }
+
+    .dsp-donate-images {
+        flex-direction: column;
+        /* Stack items vertically */
+        align-items: center;
+        /* Center items when stacked */
+        gap: 30px;
+    }
+
+    .dsp-donate-item {
+        min-width: 200px;
+        /* Adjust width when stacked */
+        max-width: 250px;
+    }
+}
+
+/* Responsive considerations */
+@media (max-width: 782px) { /* WP breakpoint */
+    .dsp-filters {
+        flex-direction: column;
+        align-items: flex-start; /* Align items left */
+        gap: 10px;
+    }
+    .dsp-filter-item {
+        width: 100%; /* Make filter items take full width */
+    }
+     .dsp-filter-item input[type="text"] {
+        width: 100%; /* Full width search */
+        min-width: auto;
+        box-sizing: border-box; /* Include padding/border in width */
+    }
+     .dsp-filter-checkboxes {
+        flex-direction: column; /* Stack source label and checkboxes */
+        align-items: flex-start;
+        gap: 5px;
+    }
+     #dsp-source-checkboxes {
+         display: flex;
+         flex-wrap: wrap; /* Allow sources to wrap */
+         gap: 5px 10px;
+     }
+
+     
+    /* Optional: Simplify table on small screens */
+    /* You might hide less important columns or use display:block for rows */
+}
