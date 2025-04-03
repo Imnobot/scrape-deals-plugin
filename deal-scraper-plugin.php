@@ -3,7 +3,7 @@
  * Plugin Name:       Deal Scraper Plugin
  * Plugin URI:        https://none.com
  * Description:       Scrapes deal websites and displays them via a shortcode. Includes debug logging. Display the plugin with the Shortcode [deal_scraper_display]
- * Version:           1.0
+ * Version:           1.0.1 // Version Bump - Allow guest refresh
  * Author:            ᕦ(ò_óˇ)ᕤ
  * Author URI:        https://none.com
  * License:           GPL v2 or later
@@ -27,7 +27,8 @@ define( 'DSP_OPTION_NAME', 'dsp_settings' ); // For future settings
 require_once DSP_PLUGIN_DIR . 'includes/db-handler.php';
 require_once DSP_PLUGIN_DIR . 'includes/parsers.php';
 require_once DSP_PLUGIN_DIR . 'includes/cron-handler.php';
-require_once DSP_PLUGIN_DIR . 'includes/shortcode-handler.php';
+require_once DSP_PLUGIN_DIR . 'admin/settings-page.php';
+require_once DSP_PLUGIN_DIR . 'includes/shortcode-handler.php'; // Contains dsp_render_shortcode
 // require_once DSP_PLUGIN_DIR . 'admin/settings-page.php'; // Optional settings page
 
 // --- Configuration Functions DEFINED EARLY ---
@@ -60,6 +61,10 @@ function dsp_activate_plugin() {
      if ( ! get_option( DSP_OPTION_NAME ) ) {
         update_option( DSP_OPTION_NAME, dsp_get_default_config() );
     }
+     // Ensure last fetch time exists on activation
+     if ( get_option('dsp_last_fetch_time') === false ) {
+         update_option('dsp_last_fetch_time', 0, 'no');
+     }
 }
 
 register_deactivation_hook( __FILE__, 'dsp_deactivate_plugin' );
@@ -88,8 +93,7 @@ function dsp_add_cron_interval( $schedules ) {
     if ($interval < 60) $interval = 60; // Minimum 60 seconds
     $schedules['dsp_fetch_interval'] = array(
         'interval' => $interval,
-        // --- CHANGE THIS LINE ---
-        'display'  => esc_html__( 'Deal Scraper Fetch Interval (Daily)', 'deal-scraper-plugin' ), // Updated Display Name
+        'display'  => esc_html__( 'Deal Scraper Fetch Interval', 'deal-scraper-plugin' ), // Simpler name
     );
     return $schedules;
 }
@@ -109,13 +113,15 @@ function dsp_enqueue_assets() {
     global $post;
     // Efficient check for shortcode before enqueuing
     if ( is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'deal_scraper_display' ) ) {
-        wp_enqueue_style( 'dsp-style', DSP_PLUGIN_URL . 'assets/css/deal-display.css', [], '1.1.1' ); // Version bump
-        wp_enqueue_script( 'dsp-script', DSP_PLUGIN_URL . 'assets/js/deal-display.js', ['jquery'], '1.1.1', true ); // Version bump
+        $plugin_version = '1.0.1'; // Match current version
+        wp_enqueue_style( 'dsp-style', DSP_PLUGIN_URL . 'assets/css/deal-display.css', [], $plugin_version );
+        wp_enqueue_script( 'dsp-script', DSP_PLUGIN_URL . 'assets/js/deal-display.js', ['jquery'], $plugin_version, true );
 
         // Get enabled sources using the now-available function
         $config = dsp_get_config();
         $enabled_sources = array_keys(array_filter($config, function($site){ return !empty($site['enabled']); }));
 
+        // Use v1.0 localization strings
         wp_localize_script( 'dsp-script', 'dsp_ajax_obj', array(
             'ajax_url' => admin_url( 'admin-ajax.php' ),
             'nonce'    => wp_create_nonce( 'dsp_ajax_nonce' ),
@@ -133,14 +139,14 @@ function dsp_enqueue_assets() {
 
 // --- AJAX Handlers ---
 
-// Get deals for the shortcode display
+// Get deals for the shortcode display (Used by v1.0 JS on initial load)
 add_action( 'wp_ajax_dsp_get_deals', 'dsp_ajax_get_deals_handler' );
 add_action( 'wp_ajax_nopriv_dsp_get_deals', 'dsp_ajax_get_deals_handler' );
 
 function dsp_ajax_get_deals_handler() {
     check_ajax_referer( 'dsp_ajax_nonce', 'nonce' );
 
-    $deals = DSP_DB_Handler::get_deals(); // Add sorting args if needed later
+    $deals = DSP_DB_Handler::get_deals(); // Default sort: first_seen DESC
     $last_fetch_time = get_option('dsp_last_fetch_time', 0);
 
     $processed_deals = [];
@@ -149,6 +155,7 @@ function dsp_ajax_get_deals_handler() {
              // Ensure deal is an object with expected properties before accessing
             if (is_object($deal) && isset($deal->first_seen)) {
                  $first_seen_ts = strtotime($deal->first_seen); // Returns false on failure
+                 // Base 'is_new' on last fetch time
                  $deal->is_new = ($first_seen_ts && $last_fetch_time && $first_seen_ts >= $last_fetch_time);
                  $deal->first_seen_formatted = $first_seen_ts ? date('Y-m-d H:i', $first_seen_ts) : 'N/A';
                  $deal->is_lifetime = dsp_is_lifetime_deal_php($deal); // Check lifetime status
@@ -158,19 +165,19 @@ function dsp_ajax_get_deals_handler() {
     }
 
     wp_send_json_success( [
-        'deals' => $processed_deals,
+        'deals' => $processed_deals, // Send the processed list
         'last_fetch' => $last_fetch_time ? date('Y-m-d H:i:s', $last_fetch_time) : __('Never', 'deal-scraper-plugin')
     ] );
 }
 
 // Trigger manual refresh
 add_action( 'wp_ajax_dsp_refresh_deals', 'dsp_ajax_refresh_deals_handler' );
-// No nopriv by default
+add_action( 'wp_ajax_nopriv_dsp_refresh_deals', 'dsp_ajax_refresh_deals_handler' ); // *** ADDED THIS LINE ***
 
 function dsp_ajax_refresh_deals_handler() {
     check_ajax_referer( 'dsp_ajax_nonce', 'nonce' );
 
-    // Optional Capability Check
+    // Optional Capability Check - Kept commented out from v1.0
     // if (!current_user_can('manage_options')) {
     //     wp_send_json_error(['message' => __('Permission denied.', 'deal-scraper-plugin'), 'log' => ['Permission Denied.']], 403);
     // }
@@ -193,14 +200,15 @@ function dsp_ajax_refresh_deals_handler() {
         foreach ($current_deals_after_refresh as $deal) {
              if (is_object($deal) && isset($deal->first_seen)) {
                 $first_seen_ts = strtotime($deal->first_seen);
+                // Create a temporary object or modify in place
                 $deal->is_new = ($first_seen_ts && $current_last_fetch_time && $first_seen_ts >= $current_last_fetch_time);
                 $deal->first_seen_formatted = $first_seen_ts ? date('Y-m-d H:i', $first_seen_ts) : 'N/A';
                 $deal->is_lifetime = dsp_is_lifetime_deal_php($deal);
-                $processed_deals[] = $deal;
+                $processed_deals[] = $deal; // Add the processed deal
             }
         }
     }
-    $response_data['deals'] = $processed_deals; // Add potentially updated deals list
+    $response_data['deals'] = $processed_deals; // Send the full, processed list back
 
     // Determine success/error based on $result from cron function
     if (isset($result['error'])) { // Handle early exit error
@@ -214,7 +222,10 @@ function dsp_ajax_refresh_deals_handler() {
 
     } else {
         // Successful refresh
-        $response_data['message'] = sprintf(__('Refresh successful. Processed %d sites. Found %d new deals.', 'deal-scraper-plugin'), $result['sites_processed'], $result['new_deals_count']);
+        $response_data['message'] = sprintf(__('Refresh successful. Processed %d sites. Found %d new deals.', 'deal-scraper-plugin'),
+            $result['sites_processed'] ?? 0, // Use null coalescing for safety
+            $result['new_deals_count'] ?? 0
+        );
         wp_send_json_success($response_data);
     }
 }
@@ -229,3 +240,5 @@ function dsp_is_lifetime_deal_php($deal_obj) {
     // $desc_check = isset($deal_obj->description) && $deal_obj->description && stripos($deal_obj->description, 'lifetime') !== false;
     return $title_check || $price_check; // || $desc_check;
 }
+
+?>
