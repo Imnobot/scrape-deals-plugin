@@ -2,8 +2,8 @@
 /**
  * Plugin Name:       Deal Scraper Plugin
  * Plugin URI:        https://none.com
- * Description:       Scrapes deal websites and displays them via a shortcode. Includes debug logging. Display the plugin with the Shortcode [deal_scraper_display]
- * Version:           1.0.1 // Version Bump - Allow guest refresh
+ * Description:       Scrapes deal websites and displays them via a shortcode. Includes debug logging, dark mode, email subscription. [deal_scraper_display]
+ * Version:           1.0.4 // Version Bump - Frontend Subscribe Feature
  * Author:            ᕦ(ò_óˇ)ᕤ
  * Author URI:        https://none.com
  * License:           GPL v2 or later
@@ -20,21 +20,18 @@ define( 'DSP_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'DSP_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
 define( 'DSP_FETCH_INTERVAL_SECONDS', 24 * 60 * 60 ); // Default: 24 hours
 define( 'DSP_CRON_HOOK', 'dsp_periodic_deal_fetch' );
-define( 'DSP_OPTION_NAME', 'dsp_settings' ); // For future settings
+define( 'DSP_OPTION_NAME', 'dsp_settings' ); // Option name for settings
 
 // --- Load Required Files FIRST ---
-// Make sure these are loaded before any functions that might depend on them are called by hooks.
 require_once DSP_PLUGIN_DIR . 'includes/db-handler.php';
 require_once DSP_PLUGIN_DIR . 'includes/parsers.php';
 require_once DSP_PLUGIN_DIR . 'includes/cron-handler.php';
-require_once DSP_PLUGIN_DIR . 'admin/settings-page.php';
-require_once DSP_PLUGIN_DIR . 'includes/shortcode-handler.php'; // Contains dsp_render_shortcode
-// require_once DSP_PLUGIN_DIR . 'admin/settings-page.php'; // Optional settings page
+require_once DSP_PLUGIN_DIR . 'admin/settings-page.php'; // Include settings page
+require_once DSP_PLUGIN_DIR . 'includes/shortcode-handler.php'; // Includes dsp_render_shortcode
 
-// --- Configuration Functions DEFINED EARLY ---
-// Define these before hooks that might use them (like dsp_enqueue_assets)
+// --- Configuration Functions ---
+// Define default settings structure here, including new ones
 function dsp_get_default_config() {
-     // Reset enabled flags here if you were testing one-by-one previously
      return [
         'sites' => [
              "AppSumo" => ["url" => "https://appsumo.com/software/?sort=latest", "parser" => "parse_appsumo_php", "enabled" => true],
@@ -42,23 +39,30 @@ function dsp_get_default_config() {
              "DealFuel" => ["url" => "https://www.dealfuel.com/product-category/all/?orderby=date", "parser" => "parse_dealfuel_php", "enabled" => true],
              "DealMirror" => ["url" => "https://dealmirror.com/product-category/new-arrivals/", "parser" => "parse_dealmirror_php", "enabled" => true]
          ],
+         'email_enabled' => false,
+         'email_frequency' => 'weekly',
+         'email_recipients' => [],
+         'show_debug_button' => true,
+         'refresh_button_access' => 'all', // Default for refresh button
+         'dark_mode_default' => 'light', // Default for dark mode
      ];
 }
 
+// Function to get only the site configurations for scraping
 function dsp_get_config() {
-    // $options = get_option(DSP_OPTION_NAME); // Use options if/when settings page is added
-    // return $options ? ($options['sites'] ?? []) : dsp_get_default_config()['sites'];
-    $default_config = dsp_get_default_config(); // Get defaults
-    return $default_config['sites'] ?? []; // Return only the sites array, or empty if structure is wrong
+    $options = get_option(DSP_OPTION_NAME);
+    $defaults = dsp_get_default_config();
+    $merged_options = wp_parse_args($options, $defaults);
+    return $merged_options['sites'] ?? []; // Return only the sites array
 }
 
 // --- Activation / Deactivation Hooks ---
-// These generally run in specific contexts where function availability isn't usually an issue.
 register_activation_hook( __FILE__, 'dsp_activate_plugin' );
 function dsp_activate_plugin() {
     DSP_DB_Handler::create_table();
     dsp_schedule_cron();
-     if ( ! get_option( DSP_OPTION_NAME ) ) {
+    // Set default options ONLY if the option does not exist at all
+    if ( false === get_option( DSP_OPTION_NAME ) ) {
         update_option( DSP_OPTION_NAME, dsp_get_default_config() );
     }
      // Ensure last fetch time exists on activation
@@ -93,152 +97,231 @@ function dsp_add_cron_interval( $schedules ) {
     if ($interval < 60) $interval = 60; // Minimum 60 seconds
     $schedules['dsp_fetch_interval'] = array(
         'interval' => $interval,
-        'display'  => esc_html__( 'Deal Scraper Fetch Interval', 'deal-scraper-plugin' ), // Simpler name
+        'display'  => esc_html__( 'Deal Scraper Fetch Interval', 'deal-scraper-plugin' ),
     );
     return $schedules;
 }
 
-// Hook the actual cron task function (defined in cron-handler.php)
+// Hook the actual cron task function
 add_action( DSP_CRON_HOOK, 'dsp_run_deal_fetch_cron' );
 
 
 // --- Shortcode Registration ---
-// The rendering function is defined in shortcode-handler.php
 add_shortcode( 'deal_scraper_display', 'dsp_render_shortcode' );
 
 // --- Enqueue Scripts and Styles ---
-// This function NOW runs AFTER dsp_get_config is defined above.
 add_action( 'wp_enqueue_scripts', 'dsp_enqueue_assets' );
 function dsp_enqueue_assets() {
     global $post;
-    // Efficient check for shortcode before enqueuing
     if ( is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'deal_scraper_display' ) ) {
-        $plugin_version = '1.0.1'; // Match current version
+        $plugin_version = '1.0.4'; // Match current version
         wp_enqueue_style( 'dsp-style', DSP_PLUGIN_URL . 'assets/css/deal-display.css', [], $plugin_version );
         wp_enqueue_script( 'dsp-script', DSP_PLUGIN_URL . 'assets/js/deal-display.js', ['jquery'], $plugin_version, true );
 
-        // Get enabled sources using the now-available function
-        $config = dsp_get_config();
-        $enabled_sources = array_keys(array_filter($config, function($site){ return !empty($site['enabled']); }));
+        // Get config for sources
+        $config_sites = dsp_get_config();
+        $enabled_sources = array_keys(array_filter($config_sites, function($site){ return !empty($site['enabled']); }));
 
-        // Use v1.0 localization strings
+        // --- Get ALL settings for localization ---
+        $options = get_option( DSP_OPTION_NAME );
+        $defaults = dsp_get_default_config();
+        $dark_mode_setting = isset( $options['dark_mode_default'] ) ? $options['dark_mode_default'] : $defaults['dark_mode_default'];
+        // Add more strings needed by JS
+        $email_enabled = isset( $options['email_enabled'] ) ? (bool) $options['email_enabled'] : false;
+
         wp_localize_script( 'dsp-script', 'dsp_ajax_obj', array(
             'ajax_url' => admin_url( 'admin-ajax.php' ),
             'nonce'    => wp_create_nonce( 'dsp_ajax_nonce' ),
+            // --- Text strings for JS ---
             'loading_text' => __('Loading deals...', 'deal-scraper-plugin'),
             'error_text' => __('Error loading deals.', 'deal-scraper-plugin'),
             'never_text' => __('Never', 'deal-scraper-plugin'),
             'last_updated_text' => __('Last fetched:', 'deal-scraper-plugin'),
-             'refreshing_text' => __('Refreshing...', 'deal-scraper-plugin'),
-             'show_log_text' => __('Show Debug Log', 'deal-scraper-plugin'),
-             'hide_log_text' => __('Hide Debug Log', 'deal-scraper-plugin'),
-            'config_sources' => $enabled_sources
+            'refreshing_text' => __('Refreshing...', 'deal-scraper-plugin'),
+            'show_log_text' => __('Show Debug Log', 'deal-scraper-plugin'),
+            'hide_log_text' => __('Hide Debug Log', 'deal-scraper-plugin'),
+            'no_deals_found_text' => __('No deals found matching criteria.', 'deal-scraper-plugin'),
+            'refresh_finished_text' => __('Refresh finished.', 'deal-scraper-plugin'),
+            'error_refresh_ajax_text' => __('Refresh failed (AJAX Error).', 'deal-scraper-plugin'),
+            'error_refresh_invalid_resp_text' => __('Refresh failed (Invalid Response).', 'deal-scraper-plugin'),
+            'yes_text' => __('Yes', 'deal-scraper-plugin'),
+            'no_text' => __('No', 'deal-scraper-plugin'),
+            // Subscription Modal Strings
+            'subscribe_invalid_email_format' => __('Please enter a valid email format.', 'deal-scraper-plugin'),
+            'subscribe_enter_email' => __('Please enter an email address.', 'deal-scraper-plugin'),
+            'subscribe_error_generic' => __('Subscription failed. Please try again later.', 'deal-scraper-plugin'),
+            'subscribe_error_network' => __('Subscription failed due to a network error.', 'deal-scraper-plugin'),
+
+
+            // --- Config data for JS ---
+            'config_sources' => $enabled_sources,
+            'dark_mode_default' => $dark_mode_setting,
+            'email_notifications_enabled' => $email_enabled, // Let JS know if sub feature active
         ) );
     }
 }
+// add_action( 'wp_enqueue_scripts', 'dsp_enqueue_assets' ); // Ensure hook is present
+
 
 // --- AJAX Handlers ---
 
-// Get deals for the shortcode display (Used by v1.0 JS on initial load)
+// Get deals for the shortcode display (Used by v1.0.x JS on initial load)
 add_action( 'wp_ajax_dsp_get_deals', 'dsp_ajax_get_deals_handler' );
 add_action( 'wp_ajax_nopriv_dsp_get_deals', 'dsp_ajax_get_deals_handler' );
 
 function dsp_ajax_get_deals_handler() {
     check_ajax_referer( 'dsp_ajax_nonce', 'nonce' );
-
-    $deals = DSP_DB_Handler::get_deals(); // Default sort: first_seen DESC
+    $deals = DSP_DB_Handler::get_deals();
     $last_fetch_time = get_option('dsp_last_fetch_time', 0);
-
     $processed_deals = [];
     if ($deals) {
         foreach ($deals as $deal) {
-             // Ensure deal is an object with expected properties before accessing
             if (is_object($deal) && isset($deal->first_seen)) {
-                 $first_seen_ts = strtotime($deal->first_seen); // Returns false on failure
-                 // Base 'is_new' on last fetch time
+                 $first_seen_ts = strtotime($deal->first_seen);
                  $deal->is_new = ($first_seen_ts && $last_fetch_time && $first_seen_ts >= $last_fetch_time);
                  $deal->first_seen_formatted = $first_seen_ts ? date('Y-m-d H:i', $first_seen_ts) : 'N/A';
-                 $deal->is_lifetime = dsp_is_lifetime_deal_php($deal); // Check lifetime status
+                 $deal->is_lifetime = dsp_is_lifetime_deal_php($deal);
                  $processed_deals[] = $deal;
             }
         }
     }
-
     wp_send_json_success( [
-        'deals' => $processed_deals, // Send the processed list
+        'deals' => $processed_deals,
         'last_fetch' => $last_fetch_time ? date('Y-m-d H:i:s', $last_fetch_time) : __('Never', 'deal-scraper-plugin')
     ] );
 }
 
-// Trigger manual refresh
+// Trigger manual refresh (AJAX Handler)
 add_action( 'wp_ajax_dsp_refresh_deals', 'dsp_ajax_refresh_deals_handler' );
-add_action( 'wp_ajax_nopriv_dsp_refresh_deals', 'dsp_ajax_refresh_deals_handler' ); // *** ADDED THIS LINE ***
+add_action( 'wp_ajax_nopriv_dsp_refresh_deals', 'dsp_ajax_refresh_deals_handler' ); // Allow guest refresh trigger
 
 function dsp_ajax_refresh_deals_handler() {
     check_ajax_referer( 'dsp_ajax_nonce', 'nonce' );
 
-    // Optional Capability Check - Kept commented out from v1.0
-    // if (!current_user_can('manage_options')) {
-    //     wp_send_json_error(['message' => __('Permission denied.', 'deal-scraper-plugin'), 'log' => ['Permission Denied.']], 403);
-    // }
+    // Server-side access check based on settings
+    $options = get_option( DSP_OPTION_NAME );
+    $defaults = dsp_get_default_config();
+    $refresh_access = isset( $options['refresh_button_access'] ) ? $options['refresh_button_access'] : $defaults['refresh_button_access'];
+    $allow_refresh = false;
+    switch ( $refresh_access ) {
+        case 'all': $allow_refresh = true; break;
+        case 'logged_in': if ( is_user_logged_in() ) { $allow_refresh = true; } break;
+        case 'admins': if ( current_user_can( 'manage_options' ) ) { $allow_refresh = true; } break;
+    }
+    if ( ! $allow_refresh ) {
+        wp_send_json_error(['message' => __('Permission denied.', 'deal-scraper-plugin'), 'log' => ['Refresh blocked by setting: '.$refresh_access]], 403);
+        return;
+    }
 
-    $result = dsp_run_deal_fetch_cron(true); // Run fetch logic
-
-    // Prepare response, always include logs
-    $response_data = [
-        'log' => isset($result['log']) ? $result['log'] : ['[ERROR] Log data missing from cron handler.'],
-        'message' => '',
-        'deals' => [], // Will be populated below
-        'last_fetch' => get_option('dsp_last_fetch_time') ? date('Y-m-d H:i:s', get_option('dsp_last_fetch_time')) : __('Never', 'deal-scraper-plugin'),
-    ];
-
-    // Fetch current deals AFTER the refresh attempt to show updated state
-    $current_deals_after_refresh = DSP_DB_Handler::get_deals();
+    // Proceed with refresh
+    $result = dsp_run_deal_fetch_cron(true);
+    $response_data = ['log' => $result['log'] ?? [], 'message' => '', 'deals' => [], 'last_fetch' => get_option('dsp_last_fetch_time') ? date('Y-m-d H:i:s', get_option('dsp_last_fetch_time')) : __('Never', 'deal-scraper-plugin')];
+    $current_deals = DSP_DB_Handler::get_deals();
     $processed_deals = [];
-    if ($current_deals_after_refresh) {
-        $current_last_fetch_time = get_option('dsp_last_fetch_time', 0); // Re-get in case it was updated
-        foreach ($current_deals_after_refresh as $deal) {
+    if ($current_deals) {
+        $last_fetch = get_option('dsp_last_fetch_time', 0);
+        foreach ($current_deals as $deal) {
              if (is_object($deal) && isset($deal->first_seen)) {
-                $first_seen_ts = strtotime($deal->first_seen);
-                // Create a temporary object or modify in place
-                $deal->is_new = ($first_seen_ts && $current_last_fetch_time && $first_seen_ts >= $current_last_fetch_time);
-                $deal->first_seen_formatted = $first_seen_ts ? date('Y-m-d H:i', $first_seen_ts) : 'N/A';
-                $deal->is_lifetime = dsp_is_lifetime_deal_php($deal);
-                $processed_deals[] = $deal; // Add the processed deal
+                $ts = strtotime($deal->first_seen);
+                $p_deal = clone $deal;
+                $p_deal->is_new = ($ts && $last_fetch && $ts >= $last_fetch);
+                $p_deal->first_seen_formatted = $ts ? date('Y-m-d H:i', $ts) : 'N/A';
+                $p_deal->is_lifetime = dsp_is_lifetime_deal_php($deal);
+                $processed_deals[] = $p_deal;
             }
         }
     }
-    $response_data['deals'] = $processed_deals; // Send the full, processed list back
-
-    // Determine success/error based on $result from cron function
-    if (isset($result['error'])) { // Handle early exit error
-         $response_data['message'] = $result['error'];
-         wp_send_json_error($response_data);
-
-    } elseif (isset($result['error_summary'])) { // Handle errors during processing
-        $response_data['message'] = $result['error_summary'];
-        // Send success status code (200) but with error message, logs, and current deals
-        wp_send_json_success($response_data);
-
-    } else {
-        // Successful refresh
-        $response_data['message'] = sprintf(__('Refresh successful. Processed %d sites. Found %d new deals.', 'deal-scraper-plugin'),
-            $result['sites_processed'] ?? 0, // Use null coalescing for safety
-            $result['new_deals_count'] ?? 0
-        );
-        wp_send_json_success($response_data);
-    }
+    $response_data['deals'] = $processed_deals;
+    if (isset($result['error'])) { $response_data['message'] = $result['error']; wp_send_json_error($response_data); }
+    elseif (isset($result['error_summary'])) { $response_data['message'] = $result['error_summary']; wp_send_json_success($response_data); }
+    else { $response_data['message'] = sprintf(__('Refresh successful. Processed %d sites. Found %d new deals.', 'deal-scraper-plugin'), $result['sites_processed'] ?? 0, $result['new_deals_count'] ?? 0); wp_send_json_success($response_data); }
 }
 
 
-// Helper function to check for lifetime deal
+// *** NEW: AJAX Handler for Frontend Email Subscription ***
+add_action( 'wp_ajax_dsp_subscribe_email', 'dsp_ajax_subscribe_email_handler' );
+add_action( 'wp_ajax_nopriv_dsp_subscribe_email', 'dsp_ajax_subscribe_email_handler' ); // Allow guests
+
+function dsp_ajax_subscribe_email_handler() {
+    // Verify nonce
+    check_ajax_referer( 'dsp_ajax_nonce', 'nonce' );
+
+    // Get current settings
+    $options = get_option( DSP_OPTION_NAME );
+    $defaults = dsp_get_default_config();
+    // Ensure options is an array
+    if (!is_array($options)) {
+         $options = $defaults;
+    }
+
+    // Check if email notifications are enabled globally first
+    $email_enabled = isset( $options['email_enabled'] ) ? (bool) $options['email_enabled'] : $defaults['email_enabled'];
+    if (!$email_enabled) {
+         wp_send_json_error(['message' => __('Email notifications are currently disabled by the site administrator.', 'deal-scraper-plugin')], 403); // Use 403 Permission Denied
+         return;
+    }
+
+    // Get and validate email from POST data
+    if ( ! isset( $_POST['email'] ) || empty( trim( $_POST['email'] ) ) ) {
+        wp_send_json_error(['message' => __('Please enter an email address.', 'deal-scraper-plugin')], 400); // Use 400 Bad Request
+        return;
+    }
+
+    $email_to_add = sanitize_email( trim( $_POST['email'] ) );
+
+    if ( ! is_email( $email_to_add ) ) {
+        wp_send_json_error(['message' => __('Invalid email address provided.', 'deal-scraper-plugin')], 400); // Use 400 Bad Request
+        return;
+    }
+
+    // Get current recipients list, ensuring it's an array
+    $current_recipients = isset( $options['email_recipients'] ) && is_array( $options['email_recipients'] ) ? $options['email_recipients'] : $defaults['email_recipients'];
+
+    // Check if email already exists (case-insensitive)
+    $email_exists = false;
+    foreach ($current_recipients as $existing_email) {
+        if (strcasecmp($existing_email, $email_to_add) === 0) {
+            $email_exists = true;
+            break;
+        }
+    }
+
+    if ( $email_exists ) {
+        // It's not an error, just feedback
+        wp_send_json_success(['message' => __('This email address is already subscribed.', 'deal-scraper-plugin')]);
+        return;
+    }
+
+    // Add the new email and update the option
+    $current_recipients[] = $email_to_add;
+    // Ensure uniqueness although the check above mostly handles it
+    $options['email_recipients'] = array_unique($current_recipients);
+
+    $update_result = update_option( DSP_OPTION_NAME, $options );
+
+    if ( $update_result ) {
+        wp_send_json_success(['message' => __('Successfully subscribed! You will receive future deal notifications.', 'deal-scraper-plugin')]);
+    } else {
+        // Check if the failure was because the option didn't actually change (which means the email was already there - race condition?)
+        $options_after_attempt = get_option(DSP_OPTION_NAME);
+         if (is_array($options_after_attempt) && isset($options_after_attempt['email_recipients']) && in_array($email_to_add, $options_after_attempt['email_recipients'])) {
+            wp_send_json_success(['message' => __('This email address is already subscribed (verified).', 'deal-scraper-plugin')]);
+         } else {
+            // Genuine update error
+            error_log("DSP Subscribe Error: update_option failed for ". DSP_OPTION_NAME . " - potentially database issue.");
+            wp_send_json_error(['message' => __('Subscription failed due to a server error. Please try again later.', 'deal-scraper-plugin')], 500); // Use 500 Internal Server Error
+         }
+    }
+}
+// *** END NEW AJAX Handler ***
+
+
+// --- Helper Functions ---
 function dsp_is_lifetime_deal_php($deal_obj) {
     if (!is_object($deal_obj)) return false;
-    $title_check = isset($deal_obj->title) && $deal_obj->title && stripos($deal_obj->title, 'lifetime') !== false;
-    $price_check = isset($deal_obj->price) && $deal_obj->price && stripos($deal_obj->price, 'lifetime') !== false;
-    // Optionally check description too if needed
-    // $desc_check = isset($deal_obj->description) && $deal_obj->description && stripos($deal_obj->description, 'lifetime') !== false;
-    return $title_check || $price_check; // || $desc_check;
+    $title_check = isset($deal_obj->title) && is_string($deal_obj->title) && stripos($deal_obj->title, 'lifetime') !== false;
+    $price_check = isset($deal_obj->price) && is_string($deal_obj->price) && stripos($deal_obj->price, 'lifetime') !== false;
+    return $title_check || $price_check;
 }
 
 ?>

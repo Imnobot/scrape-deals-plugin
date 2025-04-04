@@ -142,19 +142,23 @@
 
 /* Debug Controls */
 .dsp-debug-controls {
+    display: flex; /* Use flex for alignment */
+    gap: 10px; /* Space between buttons */
     margin-top: 10px;
     margin-bottom: 10px;
     padding-bottom: 10px;
     border-bottom: 1px solid #e5e5e5;
+    flex-wrap: wrap; /* Allow buttons to wrap */
 }
 
-/* Secondary Button Style (for debug toggle) */
+/* Secondary Button Style (for debug toggle and donate) */
 .dsp-button-secondary {
     background: #f6f7f7;
     border-color: #dcdcde;
     color: #50575e;
     box-shadow: none;
-    font-size: 13px; /* Match primary button size */
+    /* Ensure size matches primary if needed */
+    font-size: 13px;
     line-height: 2.15384615;
     min-height: 30px;
     padding: 0 10px;
@@ -206,11 +210,12 @@
     font-size: 0.9em;
     color: #50575e; /* WP text secondary color */
     padding: 5px 0;
-    overflow: hidden;
+    overflow: hidden; /* Contain floats */
     line-height: 1.4;
 }
 #dsp-last-updated {
     color: #7e8993; /* Lighter grey */
+    float: right; /* Align to the right */
 }
 
 
@@ -276,7 +281,7 @@
 .dsp-table tbody tr:hover {
     background-color: #f0f0f1; /* Lighter hover */
 }
-/* Alternate row background */
+/* Alternate row background (using JS v1.0 classes) */
 .dsp-table tbody tr.dsp-odd-row {
     background-color: #fff;
 }
@@ -300,7 +305,7 @@
     margin-top: 3px;
 }
 
-/* Row Highlighting */
+/* Row Highlighting (using JS v1.0 classes) */
 .dsp-new-item {
     background-color: #fff9e6 !important; /* Light yellow, important to override even/odd */
 }
@@ -314,221 +319,216 @@
     font-weight: 600;
 }
 
-.dsp-loading td, .dsp-error td {
+/* Loading / Error Rows (Used by JS v1.0) */
+.dsp-loading-row td, .dsp-error-row td {
     text-align: center;
     color: #7e8993;
     font-style: italic;
     padding: 20px;
 }
-.dsp-error td {
+.dsp-error-row td {
     color: #d63638; /* Red error text */
 }
 
-/* --- Add these styles for the Donate Modal --- */
-
-/* Debug/Donate Controls Alignment */
-.dsp-debug-controls {
-    display: flex;
-    /* Arrange buttons horizontally */
-    gap: 10px;
-    /* Space between buttons */
-    margin-top: 10px;
-    margin-bottom: 10px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #e5e5e5;
-    flex-wrap: wrap;
-    /* Allow buttons to wrap on small screens */
-}
-
-/* Modal Background Overlay */
+/* Donate Modal Styles */
 .dsp-modal {
-    display: none;
-    /* Hidden by default */
-    position: fixed;
-    /* Stay in place */
-    z-index: 1050;
-    /* Sit on top - higher than most WP elements */
-    left: 0;
-    top: 0;
-    width: 100%;
-    /* Full width */
-    height: 100%;
-    /* Full height */
-    overflow: auto;
-    /* Enable scroll if needed */
-    background-color: rgba(0, 0, 0, 0.7);
-    /* Black w/ opacity */
-    -webkit-backdrop-filter: blur(3px);
-    /* Optional: blur background */
-    backdrop-filter: blur(3px);
+    display: none; /* Hidden by default */
+    position: fixed; z-index: 1050;
+    left: 0; top: 0; width: 100%; height: 100%;
+    overflow: auto; background-color: rgba(0, 0, 0, 0.7);
+    -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
 }
-
-/* Modal Content Box */
 .dsp-modal-content {
-    background-color: #fefefe;
-    margin: 8% auto;
-    /* 8% from the top and centered */
-    padding: 25px 35px;
-    border: 1px solid #dcdcde;
-    width: 90%;
-    /* Could be more or less, depending on screen size */
-    max-width: 750px;
-    /* Maximum width */
-    border-radius: 4px;
-    position: relative;
+    background-color: #fefefe; margin: 8% auto; padding: 25px 35px;
+    border: 1px solid #dcdcde; width: 90%; max-width: 750px;
+    border-radius: 4px; position: relative;
     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
     animation: dsp-modal-appear 0.3s ease-out;
-    /* Simple appear animation */
 }
-
-@keyframes dsp-modal-appear {
-    from {
-        opacity: 0;
-        transform: translateY(-30px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Modal Close Button */
+@keyframes dsp-modal-appear { from { opacity: 0; transform: translateY(-30px); } to { opacity: 1; transform: translateY(0); } }
 .dsp-modal-close {
-    color: #777;
-    position: absolute;
-    top: 10px;
-    right: 15px;
-    font-size: 28px;
-    font-weight: bold;
-    line-height: 1;
+    color: #777; position: absolute; top: 10px; right: 15px;
+    font-size: 28px; font-weight: bold; line-height: 1; cursor: pointer;
 }
-
-.dsp-modal-close:hover,
-.dsp-modal-close:focus {
-    color: #000;
-    text-decoration: none;
-    cursor: pointer;
-}
-
-/* Modal Header */
+.dsp-modal-close:hover, .dsp-modal-close:focus { color: #000; text-decoration: none; }
 .dsp-modal-content h2 {
-    margin-top: 0;
-    margin-bottom: 15px;
-    color: #1d2327;
-    font-size: 1.5em;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 10px;
+    margin-top: 0; margin-bottom: 15px; color: #1d2327; font-size: 1.5em;
+    border-bottom: 1px solid #eee; padding-bottom: 10px;
 }
-
-/* Donate Images Container */
 .dsp-donate-images {
-    display: flex;
-    flex-wrap: wrap;
-    /* Allow wrapping on smaller screens */
-    justify-content: space-around;
-    /* Distribute space */
-    align-items: flex-start;
-    /* Align items to top */
-    gap: 25px;
-    /* Space between items */
-    margin-top: 20px;
-    margin-bottom: 20px;
+    display: flex; flex-wrap: wrap; justify-content: space-around;
+    align-items: flex-start; gap: 25px; margin: 20px 0;
 }
-
-/* Individual Donate Item (Image + Text) */
 .dsp-donate-item {
-    text-align: center;
-    flex: 1;
-    /* Allow items to grow/shrink */
-    min-width: 180px;
-    /* Minimum width before wrapping */
-    max-width: 220px;
-    /* Maximum width */
+    text-align: center; flex: 1; min-width: 180px; max-width: 220px;
 }
-
-.dsp-donate-item p strong {
-    display: block;
-    margin-bottom: 8px;
-    color: #3c434a;
-}
-
+.dsp-donate-item p strong { display: block; margin-bottom: 8px; color: #3c434a; }
 .dsp-donate-item img {
-    max-width: 100%;
-    /* Ensure image fits container */
-    height: auto;
-    border: 1px solid #ddd;
-    padding: 4px;
-    /* Optional padding around QR */
-    background-color: #fff;
-    margin-bottom: 10px;
+    max-width: 100%; height: auto; border: 1px solid #ddd;
+    padding: 4px; background-color: #fff; margin-bottom: 10px;
 }
-
 .dsp-donate-item code {
-    display: block;
-    font-size: 11px;
-    word-wrap: break-word;
-    /* Wrap long addresses */
-    color: #50575e;
-    background-color: #f0f0f1;
-    padding: 5px 8px;
-    border-radius: 3px;
-    margin-top: 5px;
-    line-height: 1.5;
-    text-align: left;
-    /* Align code left for readability */
+    display: block; font-size: 11px; word-wrap: break-word; color: #50575e;
+    background-color: #f0f0f1; padding: 5px 8px; border-radius: 3px;
+    margin-top: 5px; line-height: 1.5; text-align: left;
 }
 
-/* Adjustments for smaller screens */
+/* Responsive Adjustments */
 @media (max-width: 600px) {
-    .dsp-modal-content {
-        width: 95%;
-        margin: 5% auto;
-        padding: 15px 20px;
-    }
-
-    .dsp-donate-images {
-        flex-direction: column;
-        /* Stack items vertically */
-        align-items: center;
-        /* Center items when stacked */
-        gap: 30px;
-    }
-
-    .dsp-donate-item {
-        min-width: 200px;
-        /* Adjust width when stacked */
-        max-width: 250px;
-    }
+    .dsp-modal-content { width: 95%; margin: 5% auto; padding: 15px 20px; }
+    .dsp-donate-images { flex-direction: column; align-items: center; gap: 30px; }
+    .dsp-donate-item { min-width: 200px; max-width: 250px; }
+}
+@media (max-width: 782px) { /* WP admin breakpoint */
+    .dsp-filters { flex-direction: column; align-items: flex-start; gap: 10px; }
+    .dsp-filter-item { width: 100%; }
+     .dsp-filter-item input[type="text"] { width: 100%; min-width: auto; box-sizing: border-box; }
+     .dsp-filter-checkboxes { flex-direction: column; align-items: flex-start; gap: 5px; }
+     #dsp-source-checkboxes { display: flex; flex-wrap: wrap; gap: 5px 10px; }
 }
 
-/* Responsive considerations */
-@media (max-width: 782px) { /* WP breakpoint */
-    .dsp-filters {
-        flex-direction: column;
-        align-items: flex-start; /* Align items left */
-        gap: 10px;
-    }
-    .dsp-filter-item {
-        width: 100%; /* Make filter items take full width */
-    }
-     .dsp-filter-item input[type="text"] {
-        width: 100%; /* Full width search */
-        min-width: auto;
-        box-sizing: border-box; /* Include padding/border in width */
-    }
-     .dsp-filter-checkboxes {
-        flex-direction: column; /* Stack source label and checkboxes */
-        align-items: flex-start;
-        gap: 5px;
-    }
-     #dsp-source-checkboxes {
-         display: flex;
-         flex-wrap: wrap; /* Allow sources to wrap */
-         gap: 5px 10px;
-     }
 
-     
-    /* Optional: Simplify table on small screens */
-    /* You might hide less important columns or use display:block for rows */
+/* ============================================ */
+/* === ADDED: DARK MODE STYLES START HERE === */
+/* ============================================ */
+
+.dsp-dark-mode.dsp-container { /* Target container *with* the class */
+    background-color: #2a2e34; border-color: #4f545c; color: #e0e1e2;
 }
+.dsp-dark-mode .dsp-filters { border-bottom-color: #4f545c; }
+.dsp-dark-mode .dsp-filter-item label,
+.dsp-dark-mode .dsp-filter-checkboxes > span { color: #e0e1e2; }
+.dsp-dark-mode .dsp-filter-item input[type="text"] { background-color: #1e2227; border-color: #6c737c; color: #e0e1e2; box-shadow: inset 0 1px 2px rgba(0,0,0,.3); }
+.dsp-dark-mode .dsp-source-label { color: #c8cacc; }
+/* Buttons Dark */
+.dsp-dark-mode .dsp-button { background: #3c8dbc; border-color: #3c8dbc; color: #fff; box-shadow: 0 1px 0 #2a7aaf; }
+.dsp-dark-mode .dsp-button:hover,
+.dsp-dark-mode .dsp-button:focus { background: #3483b5; border-color: #3483b5; }
+.dsp-dark-mode .dsp-button:active { background: #2e75a3; border-color: #2e75a3; }
+.dsp-dark-mode .dsp-button:disabled,
+.dsp-dark-mode .dsp-button[disabled] { background: #3a3f46 !important; border-color: #4f545c !important; color: #7e8993 !important; }
+.dsp-dark-mode .dsp-button-secondary { background: #4f545c; border-color: #6c737c; color: #e0e1e2; }
+.dsp-dark-mode .dsp-button-secondary:hover,
+.dsp-dark-mode .dsp-button-secondary:focus { background: #5a6068; border-color: #7e8993; color: #f0f1f2; }
+.dsp-dark-mode .dsp-button-secondary:active { background: #454a51; border-color: #6c737c; }
+/* Status/Log Dark */
+.dsp-dark-mode .dsp-refresh-status { color: #b4b9be; }
+.dsp-dark-mode .dsp-refresh-status.dsp-success { color: #6af072; }
+.dsp-dark-mode .dsp-refresh-status.dsp-error { color: #ff7b7b; }
+.dsp-dark-mode .dsp-debug-controls { border-bottom-color: #4f545c; }
+.dsp-dark-mode #dsp-debug-log-container { background-color: #1e2227; border-color: #4f545c; }
+.dsp-dark-mode #dsp-debug-log-container h4 { color: #e0e1e2; }
+.dsp-dark-mode #dsp-debug-log { color: #b4b9be; }
+.dsp-dark-mode .dsp-status-bar { color: #b4b9be; }
+.dsp-dark-mode #dsp-last-updated { color: #9ea3a8; }
+/* Table Dark */
+.dsp-dark-mode .dsp-table { background-color: #2a2e34; border-color: #4f545c; }
+.dsp-dark-mode .dsp-table th,
+.dsp-dark-mode .dsp-table td { border-bottom-color: #4f545c; color: #e0e1e2; }
+.dsp-dark-mode .dsp-table thead th { background-color: #3a3f46; color: #f0f1f2; border-bottom-color: #4f545c; }
+.dsp-dark-mode .dsp-table thead th .dsp-sort-indicator { border-top-color: #9ea3a8; }
+.dsp-dark-mode .dsp-table thead th.dsp-sort-asc .dsp-sort-indicator { border-bottom-color: #6dbff2; border-top-color: transparent; }
+.dsp-dark-mode .dsp-table thead th.dsp-sort-desc .dsp-sort-indicator { border-top-color: #6dbff2; }
+.dsp-dark-mode .dsp-table tbody tr:hover { background-color: #3a3f46; }
+.dsp-dark-mode .dsp-table tbody tr.dsp-odd-row { background-color: #2a2e34; }
+.dsp-dark-mode .dsp-table tbody tr.dsp-even-row { background-color: #30353c; }
+.dsp-dark-mode .dsp-table td a { color: #6dbff2; }
+.dsp-dark-mode .dsp-table td a:hover { color: #8ecbf4; }
+.dsp-dark-mode .dsp-description { color: #b4b9be; }
+/* Highlighting Dark */
+.dsp-dark-mode .dsp-new-item { background-color: #4a4a2a !important; }
+.dsp-dark-mode .dsp-new-item td { font-weight: 600; color: #f0f1f2 !important; }
+.dsp-dark-mode .dsp-lifetime-item td:nth-child(2) a,
+.dsp-dark-mode .dsp-lifetime-item td:nth-child(3) { color: #77dd77 !important; font-weight: 600; }
+.dsp-dark-mode .dsp-new-badge, /* Adjust badge if needed */
+.dsp-dark-mode .dsp-lifetime-badge { color: #f0f1f2; }
+/* Loading/Error Dark */
+.dsp-dark-mode .dsp-loading-row td,
+.dsp-dark-mode .dsp-error-row td { color: #9ea3a8; }
+.dsp-dark-mode .dsp-error-row td { color: #ff7b7b; }
+/* Donate Modal Dark */
+.dsp-dark-mode .dsp-modal-content { background-color: #2a2e34; border-color: #4f545c; color: #e0e1e2; }
+.dsp-dark-mode .dsp-modal-close { color: #b4b9be; }
+.dsp-dark-mode .dsp-modal-close:hover,
+.dsp-dark-mode .dsp-modal-close:focus { color: #f0f1f2; }
+.dsp-dark-mode .dsp-modal-content h2 { color: #f0f1f2; border-bottom-color: #4f545c; }
+.dsp-dark-mode .dsp-donate-item p strong { color: #e0e1e2; }
+.dsp-dark-mode .dsp-donate-item img { border-color: #4f545c; background-color: #f0f0f0; } /* Keep QR light */
+.dsp-dark-mode .dsp-donate-item code { color: #b4b9be; background-color: #1e2227; }
+.dsp-subscribe-modal-content {
+    padding: 25px 30px;
+}
+
+.dsp-subscribe-form {
+    display: flex;
+    gap: 10px;
+    align-items: center; /* Align items vertically */
+    margin-top: 15px;
+    margin-bottom: 15px;
+    flex-wrap: wrap; /* Allow wrapping on small screens */
+}
+
+.dsp-subscribe-form input[type="email"] {
+    flex-grow: 1; /* Allow input to take available space */
+    padding: 8px 10px; /* Slightly larger padding */
+    border: 1px solid #8c8f94;
+    border-radius: 3px;
+    min-width: 200px; /* Minimum width */
+    font-size: 14px;
+}
+
+.dsp-subscribe-form button {
+    /* Uses .dsp-button styles already */
+    flex-shrink: 0; /* Prevent button from shrinking */
+}
+
+.dsp-subscribe-status {
+    margin-top: 10px;
+    padding: 8px 12px;
+    border-radius: 3px;
+    font-size: 0.95em;
+    display: none; /* Hidden by default */
+    text-align: center;
+}
+.dsp-subscribe-status.dsp-success {
+    background-color: #e7f7e8; /* Light green background */
+    border: 1px solid #a0d3a3;
+    color: #006400; /* Dark green text */
+}
+.dsp-subscribe-status.dsp-error {
+    background-color: #fdecea; /* Light red background */
+    border: 1px solid #f2b0b0;
+    color: #a94442; /* Dark red text */
+}
+
+/* Dark mode adjustments for subscribe modal */
+.dsp-dark-mode .dsp-subscribe-modal-content {
+    /* Inherits dark modal content styles */
+}
+.dsp-dark-mode .dsp-subscribe-form input[type="email"] {
+    background-color: #1e2227;
+    border-color: #6c737c;
+    color: #e0e1e2;
+}
+.dsp-dark-mode .dsp-subscribe-status.dsp-success {
+    background-color: #2b4f2d; /* Darker green bg */
+    border-color: #518e55;
+    color: #b6eeb9; /* Lighter green text */
+}
+.dsp-dark-mode .dsp-subscribe-status.dsp-error {
+    background-color: #5a2a2a; /* Darker red bg */
+    border-color: #a86c6c;
+    color: #f5c0c0; /* Lighter red text */
+}
+
+/* Responsive adjustments for subscribe form */
+@media (max-width: 480px) {
+    .dsp-subscribe-form {
+        flex-direction: column; /* Stack vertically */
+        align-items: stretch; /* Make items full width */
+    }
+    .dsp-subscribe-form input[type="email"] {
+        min-width: 0; /* Remove min-width */
+    }
+}
+/* === DARK MODE STYLES END HERE === */
