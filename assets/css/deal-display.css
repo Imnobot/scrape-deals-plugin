@@ -532,3 +532,233 @@
     }
 }
 /* === DARK MODE STYLES END HERE === */
+/* ==========================================================================
+   Grid Layout Styles
+   ========================================================================== */
+
+/* Hide table elements when in grid mode */
+.dsp-layout-grid #dsp-deals-table {
+    display: none;
+}
+
+/* Grid Container */
+.dsp-layout-grid .dsp-grid {
+    display: flex;          /* Use flexbox for the grid */
+    flex-wrap: wrap;        /* Allow items to wrap to the next line */
+    gap: 15px;              /* Space between cards */
+    margin-top: 15px;
+}
+
+/* Individual Deal Card */
+.dsp-deal-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 15px;
+    background-color: #fff;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    /* Adjust width based on desired columns - e.g., for 3 columns with gaps */
+    /* calc((100% / 3) - (gap * (num_columns - 1) / num_columns)) */
+    width: calc((100% / 3) - (15px * 2 / 3));
+    display: flex;          /* Use flexbox inside the card too */
+    flex-direction: column; /* Stack elements vertically */
+    box-sizing: border-box; /* Include padding and border in width */
+}
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+    .dsp-deal-card {
+        /* 2 columns on medium screens */
+        width: calc((100% / 2) - (15px * 1 / 2));
+    }
+}
+@media (max-width: 600px) {
+    .dsp-deal-card {
+        /* 1 column on small screens */
+        width: 100%;
+    }
+}
+
+
+/* Card Content Styling (Example) */
+.dsp-deal-card .dsp-card-title {
+    font-size: 1.1em;
+    font-weight: bold;
+    margin: 0 0 10px 0;
+}
+.dsp-deal-card .dsp-card-title a {
+    text-decoration: none;
+    color: #333;
+}
+.dsp-deal-card .dsp-card-title a:hover {
+    color: #0073aa;
+}
+
+.dsp-deal-card .dsp-card-price {
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #555;
+    margin: 0 0 10px 0;
+}
+
+.dsp-deal-card .dsp-card-description {
+    font-size: 0.9em;
+    color: #666;
+    margin: 0 0 10px 0;
+    flex-grow: 1; /* Allows description to take up remaining space */
+    line-height: 1.4;
+}
+
+.dsp-deal-card .dsp-card-source,
+.dsp-deal-card .dsp-card-date {
+    font-size: 0.85em;
+    color: #888;
+    margin: 5px 0 0 0;
+}
+
+/* Badges within cards */
+.dsp-deal-card .dsp-lifetime-badge,
+.dsp-deal-card .dsp-new-badge {
+    font-size: 0.8em;
+    margin-left: 5px;
+    padding: 2px 5px;
+    border-radius: 3px;
+    vertical-align: middle;
+}
+.dsp-deal-card .dsp-lifetime-badge {
+    background-color: #e6f7ff;
+    border: 1px solid #91d5ff;
+    color: #096dd9;
+}
+.dsp-deal-card .dsp-new-badge {
+    background-color: #fffbe6;
+    border: 1px solid #ffe58f;
+    color: #d48806;
+}
+
+/* Loading/No Deals message in Grid */
+.dsp-layout-grid .dsp-loading-message,
+.dsp-layout-grid .dsp-error-message,
+.dsp-layout-grid .dsp-no-deals {
+    width: 100%;
+    text-align: center;
+    padding: 20px;
+    color: #666;
+}
+
+/* Dark Mode Adjustments for Grid */
+.dsp-dark-mode .dsp-deal-card {
+    background-color: #2a2a2a;
+    border-color: #444;
+    box-shadow: none;
+}
+.dsp-dark-mode .dsp-deal-card .dsp-card-title a {
+    color: #eee;
+}
+.dsp-dark-mode .dsp-deal-card .dsp-card-title a:hover {
+    color: #9ec2de;
+}
+.dsp-dark-mode .dsp-deal-card .dsp-card-price {
+    color: #ccc;
+}
+.dsp-dark-mode .dsp-deal-card .dsp-card-description {
+    color: #bbb;
+}
+.dsp-dark-mode .dsp-deal-card .dsp-card-source,
+.dsp-dark-mode .dsp-deal-card .dsp-card-date {
+    color: #999;
+}
+.dsp-dark-mode .dsp-deal-card .dsp-lifetime-badge {
+     background-color: #1b3a5b;
+     border-color: #096dd9;
+     color: #ade6ff;
+}
+.dsp-dark-mode .dsp-deal-card .dsp-new-badge {
+     background-color: #5b4b1b;
+     border-color: #d48806;
+     color: #fffbe6;
+}
+.dsp-dark-mode .dsp-loading-message,
+.dsp-dark-mode .dsp-error-message,
+.dsp-dark-mode .dsp-no-deals {
+    color: #aaa;
+}
+.dsp-layout-grid .dsp-grid-controls {
+    margin-top: 10px;
+    margin-bottom: 15px;
+    padding: 10px;
+    background-color: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+}
+
+.dsp-layout-grid .dsp-grid-controls label {
+    margin-right: 8px;
+    font-weight: bold;
+    color: #555;
+}
+
+.dsp-layout-grid #dsp-grid-sort-select {
+    padding: 5px;
+    border-radius: 3px;
+    border: 1px solid #ccc;
+}
+
+/* Dark Mode Adjustments for Grid Controls */
+.dsp-dark-mode .dsp-grid-controls {
+    background-color: #252525;
+    border-color: #444;
+}
+.dsp-dark-mode .dsp-grid-controls label {
+    color: #ccc;
+}
+.dsp-dark-mode #dsp-grid-sort-select {
+    background-color: #333;
+    border-color: #555;
+    color: #eee;
+}
+
+/* Optional: Styles for the new card element */
+.dsp-deal-card .dsp-card-new {
+    font-size: 0.85em;
+    color: #888;
+    margin-top: 8px;
+    font-style: italic;
+}
+.dsp-dark-mode .dsp-deal-card .dsp-card-new {
+    color: #999;
+}
+.dsp-pagination-controls {
+    margin-top: 20px;
+    text-align: center;
+    padding: 10px 0;
+    border-top: 1px solid #eee;
+}
+
+.dsp-pagination-controls .dsp-page-indicator {
+    display: inline-block;
+    margin: 0 15px;
+    color: #555;
+    font-size: 0.9em;
+    vertical-align: middle;
+}
+
+.dsp-pagination-controls .dsp-button {
+    margin: 0 5px;
+    padding: 6px 12px;
+    vertical-align: middle;
+}
+.dsp-pagination-controls .dsp-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Dark Mode */
+.dsp-dark-mode .dsp-pagination-controls {
+    border-top-color: #444;
+}
+.dsp-dark-mode .dsp-pagination-controls .dsp-page-indicator {
+    color: #ccc;
+}
+.dsp-dark-mode .dsp-pagination-controls .dsp-button:disabled {
+    opacity: 0.4;
+}

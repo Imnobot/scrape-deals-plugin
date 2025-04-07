@@ -1,0 +1,146 @@
+/* File: admin/css/admin-style.css */
+
+/* Adjust input widths within the WP table */
+#dsp-managed-sites-table .regular-text {
+    width: 98%;
+    max-width: 350px; /* Prevent excessive width */
+}
+#dsp-managed-sites-table .code { /* For URL and Parser */
+    font-family: monospace;
+}
+
+/* Center align test and action columns */
+#dsp-managed-sites-table .column-test,
+#dsp-managed-sites-table .column-actions {
+    text-align: center;
+}
+
+/* Style the remove button to look like WP delete links */
+#dsp-managed-sites-table .dsp-site-actions .dsp-remove-site-button {
+    color: #a00;
+    padding: 0;
+    margin: 0;
+    cursor: pointer;
+    background: none;
+    border: none;
+    text-decoration: none; /* Ensure no underline */
+    vertical-align: middle;
+}
+#dsp-managed-sites-table .dsp-site-actions .dsp-remove-site-button .dashicons {
+    font-size: 18px;
+    vertical-align: text-bottom;
+}
+#dsp-managed-sites-table .dsp-site-actions .dsp-remove-site-button:hover {
+    color: #dc3232; /* Standard WP delete hover */
+}
+
+/* Add Source button margin */
+#dsp-add-site-button {
+    margin-top: 15px;
+}
+
+/* Styling for rows marked for removal */
+#dsp-managed-sites-table .dsp-site-row.dsp-marked-for-removal td,
+#dsp-managed-sites-table .dsp-site-row.dsp-marked-for-removal th {
+    opacity: 0.5;
+    background-color: #fee;
+    position: relative; /* Needed for pseudo-element */
+}
+/* Add a strikethrough effect */
+#dsp-managed-sites-table .dsp-site-row.dsp-marked-for-removal td::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    background-color: #a00;
+    transform: translateY(-50%);
+}
+
+/* Test button and results */
+#dsp-managed-sites-table .dsp-test-parser-button {
+    margin-right: 5px;
+    vertical-align: middle;
+}
+#dsp-managed-sites-table .dsp-test-result {
+    display: block;
+    margin-top: 5px;
+    font-size: 0.9em;
+}
+#dsp-managed-sites-table .dsp-test-result.dsp-test-success {
+    color: #008000; /* Green */
+}
+#dsp-managed-sites-table .dsp-test-result.dsp-test-error {
+    color: #dc3232; /* Red */
+}
+
+/* Spinner alignment */
+#dsp-managed-sites-table .dsp-site-test .spinner {
+    float: none;
+    vertical-align: middle;
+    visibility: hidden;
+    margin: 0 0 0 5px; /* Add some space */
+}
+#dsp-managed-sites-table .dsp-site-test .spinner.is-active {
+    visibility: visible;
+}
+
+/* Ensure required inputs have visual feedback (browser default usually) */
+#dsp-managed-sites-table input:required {
+   /* Default browser styles usually handle this */
+}
+
+/* Hide template row explicitly */
+#dsp-site-row-template {
+    display: none;
+}
+/* Clear Deals Status Styles */
+#dsp-clear-deals-status {
+    display: inline-block; /* Keep it on the same line if possible */
+    margin-left: 10px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 0.9em;
+}
+#dsp-clear-deals-status.dsp-clear-success {
+    color: #006400; /* Dark Green */
+    background-color: #dff0d8;
+    border: 1px solid #d6e9c6;
+}
+#dsp-clear-deals-status.dsp-clear-error {
+    color: #a94442; /* Dark Red */
+    background-color: #f2dede;
+    border: 1px solid #ebccd1;
+}
+
+/* Ensure danger button has standard WP red color */
+.button.button-danger {
+    background: #dc3232;
+    border-color: #dc3232 #c62828 #c62828;
+    box-shadow: 0 1px 0 #c62828;
+    color: #fff;
+    text-decoration: none;
+    text-shadow: 0 -1px 1px #c62828, 1px 0 1px #c62828, 0 1px 1px #c62828, -1px 0 1px #c62828;
+}
+.button.button-danger:hover,
+.button.button-danger:focus {
+    background: #d02a2a;
+    border-color: #b42424;
+    color: #fff;
+}
+.button.button-danger:focus {
+     box-shadow: 0 0 0 1px #5b9dd9, 0 0 2px 1px rgba(30, 140, 190, 0.8);
+}
+.button.button-danger:active {
+    background: #b42424;
+    border-color: #a02121;
+    box-shadow: inset 0 2px 0 #a02121;
+}
+.button.button-danger[disabled],
+.button.button-danger:disabled {
+    color: #d1a1a1 !important;
+    background: #e98585 !important;
+    border-color: #e98585 !important;
+    text-shadow: none !important;
+}
