@@ -1,0 +1,146 @@
+/* File: assets/css/admin-style.css (v1.1.11 - Styles for Status Column) */
+
+/* Deal Scraper Plugin Admin Styles */
+
+/* Source Management Table - Desktop */
+#dsp-source-manager-ui .dsp-sources-table-responsive {
+    margin-top: 1em;
+    border: 1px solid #c3c4c7;
+}
+
+#dsp-source-manager-ui .dsp-sources-table-responsive th,
+#dsp-source-manager-ui .dsp-sources-table-responsive td {
+    padding: 8px 10px; /* WP standard padding */
+    vertical-align: middle;
+}
+
+#dsp-source-manager-ui .dsp-sources-table-responsive td input[type="text"],
+#dsp-source-manager-ui .dsp-sources-table-responsive td input[type="url"],
+#dsp-source-manager-ui .dsp-sources-table-responsive td select.dsp-source-input-parser { /* Target select too */
+    width: 98%;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+/* Adjust specific inputs */
+#dsp-source-manager-ui .dsp-sources-table-responsive td.column-source-parser select.dsp-source-input-parser {
+    width: auto; /* Allow parser file select to be smaller */
+    min-width: 150px; /* Give it some minimum */
+}
+
+#dsp-source-manager-ui .dsp-sources-table-responsive td.column-source-enabled {
+    text-align: center;
+}
+#dsp-source-manager-ui .dsp-sources-table-responsive td.column-source-actions {
+    text-align: left;
+    white-space: nowrap; /* Prevent buttons wrapping */
+}
+#dsp-source-manager-ui .dsp-sources-table-responsive tfoot td {
+    padding: 10px;
+}
+/* Ensure buttons don't have excessive margins */
+#dsp-source-manager-ui .dsp-sources-table-responsive .dsp-delete-source-button,
+#dsp-source-manager-ui .dsp-sources-table-responsive .dsp-test-source-button {
+    margin: 0;
+    padding: 0 6px 1px; /* WP link button padding */
+    vertical-align: middle;
+}
+
+/* Test Button & Results Area - Desktop */
+#dsp-source-manager-ui .dsp-test-source-button {
+    vertical-align: middle;
+    margin-right: 5px; /* Space between Test and Delete */
+}
+#dsp-source-manager-ui .dsp-test-source-spinner {
+    float: none;
+    vertical-align: middle;
+    visibility: hidden; /* Hidden by default */
+    margin: 0 0 0 5px; /* Space after Test button */
+}
+#dsp-source-manager-ui .dsp-test-source-result {
+    display: block; /* Ensure it takes its own line */
+    font-size: 0.9em;
+    margin-top: 4px;
+    clear: both; /* Ensure it clears floated elements if any */
+}
+.dsp-test-source-result.success {
+    color: #008000; /* Green */
+}
+.dsp-test-source-result.error {
+    color: #dc3232; /* Red */
+}
+
+/* Last Status Column - Desktop */
+.dsp-sources-table-responsive td.column-source-status {
+    font-size: 0.9em;
+    line-height: 1.4;
+}
+.dsp-status-text {
+    display: block; /* Stack status and time */
+    font-weight: 600;
+    word-break: break-word; /* Break long error/success messages */
+    margin-bottom: 3px; /* Small space before time */
+}
+.dsp-status-success {
+    color: #28a745; /* Green */
+}
+.dsp-status-error {
+    color: #dc3232; /* Red */
+}
+.dsp-status-never {
+    color: #6c757d; /* Grey */
+    font-style: italic;
+}
+.dsp-status-time {
+    color: #6c757d;
+    display: block; /* Ensure time is on its own line */
+}
+
+
+/* Responsive Styles (Matches WP admin breakpoint for tables) */
+@media screen and (max-width: 782px) {
+    .dsp-sources-table-responsive { border: 0; }
+    .dsp-sources-table-responsive thead { display: none; }
+    .dsp-sources-table-responsive tr { display: block; margin-bottom: 1em; border: 1px solid #c3c4c7; padding: 0; }
+    .dsp-sources-table-responsive td { display: flex; align-items: center; justify-content: space-between; width: 100%; box-sizing: border-box; padding: 10px; text-align: right; border-bottom: 1px solid #e1e1e1; min-height: 44px; }
+    .dsp-sources-table-responsive tr:last-child { margin-bottom: 0; }
+    .dsp-sources-table-responsive td:last-child { border-bottom: 0; }
+
+    /* Label using ::before */
+    .dsp-sources-table-responsive td::before { content: attr(data-label); font-weight: 600; text-align: left; padding-right: 10px; flex-basis: 40%; flex-shrink: 0; white-space: normal; word-wrap: break-word; }
+
+    /* Content alignment */
+    .dsp-sources-table-responsive td > * { margin-left: auto; max-width: 60%; text-align: right; box-sizing: border-box; }
+    .dsp-sources-table-responsive td > select { width: 100%; }
+
+    /* Input specifics */
+    .dsp-sources-table-responsive td input[type="text"],
+    .dsp-sources-table-responsive td input[type="url"] { width: 100%; max-width: 100%; }
+    .dsp-sources-table-responsive td.column-source-parser select { max-width: 100%; }
+
+    /* Checkbox alignment */
+    .dsp-sources-table-responsive td.column-source-enabled { justify-content: flex-end; }
+    .dsp-sources-table-responsive td.column-source-enabled::before { flex-grow: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .dsp-sources-table-responsive td.column-source-enabled input[type="checkbox"] { margin-left: 10px; max-width: none; width: auto; margin-right: 0; flex-shrink: 0; }
+    .dsp-sources-table-responsive td.column-source-enabled input[type="hidden"] { display: none; }
+
+    /* Action button alignment */
+    .dsp-sources-table-responsive td.column-source-actions { flex-wrap: wrap; justify-content: flex-end; }
+     .dsp-sources-table-responsive td.column-source-actions::before { flex-grow: 1; align-self: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+     .dsp-sources-table-responsive td.column-source-actions > button,
+     .dsp-sources-table-responsive td.column-source-actions > span.dsp-test-source-spinner { display: inline-block; flex-shrink: 0; margin-left: 5px; max-width: none; width: auto; margin-bottom: 5px; }
+      .dsp-sources-table-responsive td.column-source-actions > button:first-of-type { margin-left: 0; }
+     .dsp-sources-table-responsive td.column-source-actions > .dsp-test-source-result { width: 100%; text-align: right; margin-left: 0; max-width: 100%; flex-basis: 100%; margin-top: 5px; }
+
+     /* Last Status alignment (Responsive) */
+    .dsp-sources-table-responsive td.column-source-status { flex-direction: column; align-items: flex-end; }
+     .dsp-sources-table-responsive td.column-source-status::before { margin-bottom: 5px; flex-basis: auto; width: auto; align-self: flex-start; white-space: normal; }
+     .dsp-sources-table-responsive td.column-source-status .dsp-status-text,
+     .dsp-sources-table-responsive td.column-source-status .dsp-status-time { margin-left: 0; max-width: 100%; text-align: right; display: block; width: 100%; }
+      .dsp-sources-table-responsive td.column-source-status .dsp-status-text { margin-bottom: 3px; }
+     .dsp-sources-table-responsive td.column-source-status input[type="hidden"] { display: none; } /* Hide hidden status inputs */
+
+} /* End @media */
+
+
+/* Manual Email Status */
+#dsp-manual-email-status .notice-dismiss { text-decoration: none; }

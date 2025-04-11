@@ -742,3 +742,54 @@
     border-color: #0056b3;
     color: #fff;
 }
+/* --- Background Update Notice Styles --- */
+.dsp-update-notice {
+    background-color: #eef7ff; /* Light blue background */
+    color: #1d4f8a; /* Dark blue text */
+    border: 1px solid #b6dcfb; /* Light blue border */
+    padding: 10px 15px;
+    margin: 10px 0;
+    border-radius: 4px;
+    font-size: 0.9em;
+    display: flex; /* Use flexbox for alignment */
+    justify-content: space-between; /* Space text and button */
+    align-items: center; /* Vertically center items */
+}
+
+/* Dark Mode specific styles for the notice */
+.dsp-dark-mode .dsp-update-notice {
+    background-color: #2a3f5c; /* Darker blue background */
+    color: #cde4ff; /* Lighter blue text */
+    border-color: #4b6f9e; /* Darker blue border */
+}
+
+.dsp-dismiss-notice {
+    background: none;
+    border: 1px solid transparent; /* Keep space, hide border */
+    color: inherit; /* Inherit color */
+    font-size: 1.2em; /* Make X slightly larger */
+    line-height: 1;
+    padding: 0 5px;
+    cursor: pointer;
+    margin-left: 10px;
+    opacity: 0.7;
+}
+.dsp-dismiss-notice:hover,
+.dsp-dismiss-notice:focus {
+    opacity: 1;
+    background-color: rgba(0, 0, 0, 0.1); /* Slight hover effect */
+    border-color: rgba(0, 0, 0, 0.2);
+    outline: none;
+}
+.dsp-dark-mode .dsp-dismiss-notice:hover,
+.dsp-dark-mode .dsp-dismiss-notice:focus {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+.dsp-filter-price-range label { margin-right: 5px; }
+.dsp-filter-price-range span { margin: 0 3px; }
+.dsp-price-input {
+    width: 70px; /* Adjust as needed */
+    padding: 5px;
+    font-size: 0.9em;
+}
