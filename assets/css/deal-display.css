@@ -656,3 +656,89 @@
          text-align: center;
      }
 }
+/* --- Pagination --- */
+.dsp-pagination {
+    margin-top: 20px;
+    margin-bottom: 10px;
+    text-align: center;
+    clear: both;
+    transition: opacity 0.3s ease-in-out;
+}
+.dsp-pagination.dsp-loading {
+    opacity: 0.5;
+    pointer-events: none;
+}
+.dsp-page-numbers {
+    display: inline-block;
+    padding-left: 0;
+    margin: 0;
+    border-radius: 4px;
+    list-style: none; /* Remove list bullets */
+}
+.dsp-page-item {
+    display: inline; /* Display items side-by-side */
+}
+.dsp-page-link {
+    position: relative;
+    display: inline-block; /* Needed for padding */
+    padding: 0.5em 0.8em;
+    margin-left: -1px; /* Overlap borders */
+    line-height: 1.25;
+    color: #007bff; /* Default link color */
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+    text-decoration: none;
+    transition: color .15s ease-in-out, background-color .15s ease-in-out, border-color .15s ease-in-out;
+}
+.dsp-page-item:first-child .dsp-page-link {
+    margin-left: 0;
+    border-top-left-radius: 0.25rem;
+    border-bottom-left-radius: 0.25rem;
+}
+.dsp-page-item:last-child .dsp-page-link {
+    border-top-right-radius: 0.25rem;
+    border-bottom-right-radius: 0.25rem;
+}
+.dsp-page-link:hover {
+    z-index: 2;
+    color: #0056b3;
+    background-color: #e9ecef;
+    border-color: #dee2e6;
+}
+.dsp-page-item.dsp-disabled .dsp-page-link {
+    color: #6c757d;
+    pointer-events: none;
+    cursor: default; /* Use default cursor for disabled items */
+    background-color: #fff;
+    border-color: #dee2e6;
+    opacity: 0.6;
+}
+.dsp-page-item.dsp-current-page .dsp-page-link {
+    z-index: 1;
+    color: #fff;
+    background-color: #007bff;
+    border-color: #007bff;
+    cursor: default;
+}
+/* Dark Mode Pagination */
+.dsp-dark-mode .dsp-pagination .dsp-page-link {
+    background-color: #333;
+    border-color: #555;
+    color: #bbf;
+}
+.dsp-dark-mode .dsp-pagination .dsp-page-link:hover {
+    background-color: #444;
+    border-color: #666;
+    color: #ddf;
+}
+.dsp-dark-mode .dsp-pagination .dsp-page-item.dsp-disabled .dsp-page-link {
+    background-color: #333;
+    border-color: #555;
+    color: #777;
+    opacity: 0.5;
+}
+.dsp-dark-mode .dsp-pagination .dsp-page-item.dsp-current-page .dsp-page-link {
+    background-color: #0056b3;
+    border-color: #0056b3;
+    color: #fff;
+}
