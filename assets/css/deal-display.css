@@ -7,6 +7,8 @@
     margin-bottom: 20px;
     background-color: #f6f7f7; /* WP admin background */
     box-shadow: 0 1px 1px rgba(0,0,0,.04);
+    /* Base text color */
+    color: #2c3338;
 }
 
 /* Filters */
@@ -39,6 +41,7 @@
     background-color: #fff;
     box-shadow: inset 0 1px 2px rgba(0,0,0,.07);
     font-size: 14px; /* WP input font size */
+    color: #2c3338;
 }
 .dsp-filter-item input[type="checkbox"] {
     margin-right: 3px;
@@ -63,6 +66,7 @@
     display: inline-flex; /* Align checkbox and text better */
     align-items: center;
     gap: 4px;
+    color: #2c3338; /* Ensure default label color */
 }
 
 
@@ -281,7 +285,7 @@
 .dsp-table tbody tr:hover {
     background-color: #f0f0f1; /* Lighter hover */
 }
-/* Alternate row background (using JS v1.0 classes) */
+/* Alternate row background */
 .dsp-table tbody tr.dsp-odd-row {
     background-color: #fff;
 }
@@ -305,12 +309,13 @@
     margin-top: 3px;
 }
 
-/* Row Highlighting (using JS v1.0 classes) */
+/* Row Highlighting */
 .dsp-new-item {
-    background-color: #fff9e6 !important; /* Light yellow, important to override even/odd */
+    /* Consider using a border or icon instead of full background */
+    /* background-color: #fff9e6 !important; Light yellow, important to override even/odd */
 }
 .dsp-new-item td {
-    font-weight: 600; /* Make text bolder for new items */
+    /* font-weight: 600; Make text bolder for new items */
 }
 
 .dsp-lifetime-item td:nth-child(2) a, /* Style title link for lifetime */
@@ -318,9 +323,23 @@
     color: #006400; /* Darker Green */
     font-weight: 600;
 }
+.dsp-lifetime-badge {
+    display: inline-block;
+    background-color: #d1fcd1;
+    color: #005a00;
+    padding: 1px 5px;
+    font-size: 0.8em;
+    border-radius: 3px;
+    margin-left: 5px;
+    font-weight: bold;
+    vertical-align: middle;
+}
 
-/* Loading / Error Rows (Used by JS v1.0) */
-.dsp-loading-row td, .dsp-error-row td {
+
+/* Loading / Error / No Deals Rows */
+.dsp-loading-row td,
+.dsp-error-row td,
+.dsp-no-deals-row td { /* Includes no sources selected */
     text-align: center;
     color: #7e8993;
     font-style: italic;
@@ -349,8 +368,9 @@
 .dsp-modal-close {
     color: #777; position: absolute; top: 10px; right: 15px;
     font-size: 28px; font-weight: bold; line-height: 1; cursor: pointer;
+    background: none; border: none; padding: 0;
 }
-.dsp-modal-close:hover, .dsp-modal-close:focus { color: #000; text-decoration: none; }
+.dsp-modal-close:hover, .dsp-modal-close:focus { color: #000; text-decoration: none; outline: none;}
 .dsp-modal-content h2 {
     margin-top: 0; margin-bottom: 15px; color: #1d2327; font-size: 1.5em;
     border-bottom: 1px solid #eee; padding-bottom: 10px;
@@ -370,95 +390,17 @@
 .dsp-donate-item code {
     display: block; font-size: 11px; word-wrap: break-word; color: #50575e;
     background-color: #f0f0f1; padding: 5px 8px; border-radius: 3px;
-    margin-top: 5px; line-height: 1.5; text-align: left;
+    margin-top: 5px; line-height: 1.5; text-align: left; cursor: pointer;
 }
-
-/* Responsive Adjustments */
-@media (max-width: 600px) {
-    .dsp-modal-content { width: 95%; margin: 5% auto; padding: 15px 20px; }
-    .dsp-donate-images { flex-direction: column; align-items: center; gap: 30px; }
-    .dsp-donate-item { min-width: 200px; max-width: 250px; }
-}
-@media (max-width: 782px) { /* WP admin breakpoint */
-    .dsp-filters { flex-direction: column; align-items: flex-start; gap: 10px; }
-    .dsp-filter-item { width: 100%; }
-     .dsp-filter-item input[type="text"] { width: 100%; min-width: auto; box-sizing: border-box; }
-     .dsp-filter-checkboxes { flex-direction: column; align-items: flex-start; gap: 5px; }
-     #dsp-source-checkboxes { display: flex; flex-wrap: wrap; gap: 5px 10px; }
-}
+.dsp-donate-item code:hover { background-color: #e0e1e2; }
+.dsp-copy-feedback { font-size: 0.9em; color: green; font-weight: bold; margin-top: 10px; display: none; text-align: center; }
+.dsp-thank-you { margin-top: 20px; font-style: italic; text-align: center; }
 
 
-/* ============================================ */
-/* === ADDED: DARK MODE STYLES START HERE === */
-/* ============================================ */
-
-.dsp-dark-mode.dsp-container { /* Target container *with* the class */
-    background-color: #2a2e34; border-color: #4f545c; color: #e0e1e2;
-}
-.dsp-dark-mode .dsp-filters { border-bottom-color: #4f545c; }
-.dsp-dark-mode .dsp-filter-item label,
-.dsp-dark-mode .dsp-filter-checkboxes > span { color: #e0e1e2; }
-.dsp-dark-mode .dsp-filter-item input[type="text"] { background-color: #1e2227; border-color: #6c737c; color: #e0e1e2; box-shadow: inset 0 1px 2px rgba(0,0,0,.3); }
-.dsp-dark-mode .dsp-source-label { color: #c8cacc; }
-/* Buttons Dark */
-.dsp-dark-mode .dsp-button { background: #3c8dbc; border-color: #3c8dbc; color: #fff; box-shadow: 0 1px 0 #2a7aaf; }
-.dsp-dark-mode .dsp-button:hover,
-.dsp-dark-mode .dsp-button:focus { background: #3483b5; border-color: #3483b5; }
-.dsp-dark-mode .dsp-button:active { background: #2e75a3; border-color: #2e75a3; }
-.dsp-dark-mode .dsp-button:disabled,
-.dsp-dark-mode .dsp-button[disabled] { background: #3a3f46 !important; border-color: #4f545c !important; color: #7e8993 !important; }
-.dsp-dark-mode .dsp-button-secondary { background: #4f545c; border-color: #6c737c; color: #e0e1e2; }
-.dsp-dark-mode .dsp-button-secondary:hover,
-.dsp-dark-mode .dsp-button-secondary:focus { background: #5a6068; border-color: #7e8993; color: #f0f1f2; }
-.dsp-dark-mode .dsp-button-secondary:active { background: #454a51; border-color: #6c737c; }
-/* Status/Log Dark */
-.dsp-dark-mode .dsp-refresh-status { color: #b4b9be; }
-.dsp-dark-mode .dsp-refresh-status.dsp-success { color: #6af072; }
-.dsp-dark-mode .dsp-refresh-status.dsp-error { color: #ff7b7b; }
-.dsp-dark-mode .dsp-debug-controls { border-bottom-color: #4f545c; }
-.dsp-dark-mode #dsp-debug-log-container { background-color: #1e2227; border-color: #4f545c; }
-.dsp-dark-mode #dsp-debug-log-container h4 { color: #e0e1e2; }
-.dsp-dark-mode #dsp-debug-log { color: #b4b9be; }
-.dsp-dark-mode .dsp-status-bar { color: #b4b9be; }
-.dsp-dark-mode #dsp-last-updated { color: #9ea3a8; }
-/* Table Dark */
-.dsp-dark-mode .dsp-table { background-color: #2a2e34; border-color: #4f545c; }
-.dsp-dark-mode .dsp-table th,
-.dsp-dark-mode .dsp-table td { border-bottom-color: #4f545c; color: #e0e1e2; }
-.dsp-dark-mode .dsp-table thead th { background-color: #3a3f46; color: #f0f1f2; border-bottom-color: #4f545c; }
-.dsp-dark-mode .dsp-table thead th .dsp-sort-indicator { border-top-color: #9ea3a8; }
-.dsp-dark-mode .dsp-table thead th.dsp-sort-asc .dsp-sort-indicator { border-bottom-color: #6dbff2; border-top-color: transparent; }
-.dsp-dark-mode .dsp-table thead th.dsp-sort-desc .dsp-sort-indicator { border-top-color: #6dbff2; }
-.dsp-dark-mode .dsp-table tbody tr:hover { background-color: #3a3f46; }
-.dsp-dark-mode .dsp-table tbody tr.dsp-odd-row { background-color: #2a2e34; }
-.dsp-dark-mode .dsp-table tbody tr.dsp-even-row { background-color: #30353c; }
-.dsp-dark-mode .dsp-table td a { color: #6dbff2; }
-.dsp-dark-mode .dsp-table td a:hover { color: #8ecbf4; }
-.dsp-dark-mode .dsp-description { color: #b4b9be; }
-/* Highlighting Dark */
-.dsp-dark-mode .dsp-new-item { background-color: #4a4a2a !important; }
-.dsp-dark-mode .dsp-new-item td { font-weight: 600; color: #f0f1f2 !important; }
-.dsp-dark-mode .dsp-lifetime-item td:nth-child(2) a,
-.dsp-dark-mode .dsp-lifetime-item td:nth-child(3) { color: #77dd77 !important; font-weight: 600; }
-.dsp-dark-mode .dsp-new-badge, /* Adjust badge if needed */
-.dsp-dark-mode .dsp-lifetime-badge { color: #f0f1f2; }
-/* Loading/Error Dark */
-.dsp-dark-mode .dsp-loading-row td,
-.dsp-dark-mode .dsp-error-row td { color: #9ea3a8; }
-.dsp-dark-mode .dsp-error-row td { color: #ff7b7b; }
-/* Donate Modal Dark */
-.dsp-dark-mode .dsp-modal-content { background-color: #2a2e34; border-color: #4f545c; color: #e0e1e2; }
-.dsp-dark-mode .dsp-modal-close { color: #b4b9be; }
-.dsp-dark-mode .dsp-modal-close:hover,
-.dsp-dark-mode .dsp-modal-close:focus { color: #f0f1f2; }
-.dsp-dark-mode .dsp-modal-content h2 { color: #f0f1f2; border-bottom-color: #4f545c; }
-.dsp-dark-mode .dsp-donate-item p strong { color: #e0e1e2; }
-.dsp-dark-mode .dsp-donate-item img { border-color: #4f545c; background-color: #f0f0f0; } /* Keep QR light */
-.dsp-dark-mode .dsp-donate-item code { color: #b4b9be; background-color: #1e2227; }
+/* Subscribe Modal Styles */
 .dsp-subscribe-modal-content {
     padding: 25px 30px;
 }
-
 .dsp-subscribe-form {
     display: flex;
     gap: 10px;
@@ -467,7 +409,6 @@
     margin-bottom: 15px;
     flex-wrap: wrap; /* Allow wrapping on small screens */
 }
-
 .dsp-subscribe-form input[type="email"] {
     flex-grow: 1; /* Allow input to take available space */
     padding: 8px 10px; /* Slightly larger padding */
@@ -476,12 +417,10 @@
     min-width: 200px; /* Minimum width */
     font-size: 14px;
 }
-
 .dsp-subscribe-form button {
     /* Uses .dsp-button styles already */
     flex-shrink: 0; /* Prevent button from shrinking */
 }
-
 .dsp-subscribe-status {
     margin-top: 10px;
     padding: 8px 12px;
@@ -501,39 +440,115 @@
     color: #a94442; /* Dark red text */
 }
 
-/* Dark mode adjustments for subscribe modal */
-.dsp-dark-mode .dsp-subscribe-modal-content {
-    /* Inherits dark modal content styles */
-}
-.dsp-dark-mode .dsp-subscribe-form input[type="email"] {
-    background-color: #1e2227;
-    border-color: #6c737c;
-    color: #e0e1e2;
-}
-.dsp-dark-mode .dsp-subscribe-status.dsp-success {
-    background-color: #2b4f2d; /* Darker green bg */
-    border-color: #518e55;
-    color: #b6eeb9; /* Lighter green text */
-}
-.dsp-dark-mode .dsp-subscribe-status.dsp-error {
-    background-color: #5a2a2a; /* Darker red bg */
-    border-color: #a86c6c;
-    color: #f5c0c0; /* Lighter red text */
+/* Responsive Adjustments for Modals */
+@media (max-width: 600px) {
+    .dsp-modal-content { width: 95%; margin: 5% auto; padding: 15px 20px; }
+    .dsp-donate-images { flex-direction: column; align-items: center; gap: 30px; }
+    .dsp-donate-item { min-width: 200px; max-width: 250px; }
+    .dsp-subscribe-form { flex-direction: column; align-items: stretch; }
+    .dsp-subscribe-form input[type="email"] { min-width: 0; }
 }
 
-/* Responsive adjustments for subscribe form */
-@media (max-width: 480px) {
-    .dsp-subscribe-form {
-        flex-direction: column; /* Stack vertically */
-        align-items: stretch; /* Make items full width */
-    }
-    .dsp-subscribe-form input[type="email"] {
-        min-width: 0; /* Remove min-width */
-    }
+
+/* ============================================ */
+/* === DARK MODE STYLES START HERE === */
+/* ============================================ */
+
+/* Apply base dark styles to the container when html has the class */
+html.dsp-theme-dark .dsp-container {
+    background-color: #2a2e34; border-color: #4f545c; color: #e0e1e2;
 }
+html.dsp-theme-dark .dsp-filters { border-bottom-color: #4f545c; }
+html.dsp-theme-dark .dsp-filter-item label,
+html.dsp-theme-dark .dsp-filter-checkboxes > span { color: #e0e1e2; }
+html.dsp-theme-dark .dsp-filter-item input[type="text"],
+html.dsp-theme-dark .dsp-filter-price-range input[type="number"] { background-color: #1e2227; border-color: #6c737c; color: #e0e1e2; box-shadow: inset 0 1px 2px rgba(0,0,0,.3); }
+html.dsp-theme-dark .dsp-source-label { color: #c8cacc; }
+
+/* Buttons Dark */
+html.dsp-theme-dark .dsp-button { background: #3c8dbc; border-color: #3c8dbc; color: #fff; box-shadow: 0 1px 0 #2a7aaf; }
+html.dsp-theme-dark .dsp-button:hover,
+html.dsp-theme-dark .dsp-button:focus { background: #3483b5; border-color: #3483b5; }
+html.dsp-theme-dark .dsp-button:active { background: #2e75a3; border-color: #2e75a3; }
+html.dsp-theme-dark .dsp-button:disabled,
+html.dsp-theme-dark .dsp-button[disabled] { background: #3a3f46 !important; border-color: #4f545c !important; color: #7e8993 !important; }
+html.dsp-theme-dark .dsp-button-secondary { background: #4f545c; border-color: #6c737c; color: #e0e1e2; }
+html.dsp-theme-dark .dsp-button-secondary:hover,
+html.dsp-theme-dark .dsp-button-secondary:focus { background: #5a6068; border-color: #7e8993; color: #f0f1f2; }
+html.dsp-theme-dark .dsp-button-secondary:active { background: #454a51; border-color: #6c737c; }
+
+/* Status/Log Dark */
+html.dsp-theme-dark .dsp-refresh-status { color: #b4b9be; }
+html.dsp-theme-dark .dsp-refresh-status.dsp-success { color: #6af072; }
+html.dsp-theme-dark .dsp-refresh-status.dsp-error { color: #ff7b7b; }
+html.dsp-theme-dark .dsp-debug-controls { border-bottom-color: #4f545c; }
+html.dsp-theme-dark #dsp-debug-log-container { background-color: #1e2227; border-color: #4f545c; }
+html.dsp-theme-dark #dsp-debug-log-container h4 { color: #e0e1e2; }
+html.dsp-theme-dark #dsp-debug-log { color: #b4b9be; }
+html.dsp-theme-dark .dsp-status-bar { color: #b4b9be; }
+html.dsp-theme-dark #dsp-last-updated { color: #9ea3a8; }
+
+/* Table Dark */
+html.dsp-theme-dark .dsp-table { background-color: #2a2e34; border-color: #4f545c; }
+html.dsp-theme-dark .dsp-table th,
+html.dsp-theme-dark .dsp-table td { border-bottom-color: #4f545c; color: #e0e1e2; }
+html.dsp-theme-dark .dsp-table thead th { background-color: #3a3f46; color: #f0f1f2; border-bottom-color: #4f545c; }
+html.dsp-theme-dark .dsp-table thead th .dsp-sort-indicator { border-top-color: #9ea3a8; }
+html.dsp-theme-dark .dsp-table thead th.dsp-sort-asc .dsp-sort-indicator { border-bottom-color: #6dbff2; border-top-color: transparent !important; } /* Override default border-top */
+html.dsp-theme-dark .dsp-table thead th.dsp-sort-desc .dsp-sort-indicator { border-top-color: #6dbff2; }
+html.dsp-theme-dark .dsp-table tbody tr:hover { background-color: #3a3f46; }
+html.dsp-theme-dark .dsp-table tbody tr.dsp-odd-row { background-color: #2a2e34; }
+html.dsp-theme-dark .dsp-table tbody tr.dsp-even-row { background-color: #30353c; }
+html.dsp-theme-dark .dsp-table td a { color: #6dbff2; }
+html.dsp-theme-dark .dsp-table td a:hover { color: #8ecbf4; }
+html.dsp-theme-dark .dsp-description { color: #b4b9be; }
+
+/* Highlighting Dark */
+html.dsp-theme-dark .dsp-new-item { /* background-color: #4a4a2a !important; */ /* Maybe remove full background */ }
+html.dsp-theme-dark .dsp-new-item td { /* font-weight: 600; */ color: #f0f1f2 !important; } /* Ensure text readable */
+html.dsp-theme-dark .dsp-lifetime-item td:nth-child(2) a,
+html.dsp-theme-dark .dsp-lifetime-item td:nth-child(3) { color: #77dd77 !important; font-weight: 600; }
+html.dsp-theme-dark .dsp-lifetime-badge { color: #1f5c1f; background-color: #a1e9a1; } /* Adjust badge for dark */
+
+/* Loading/Error Dark */
+html.dsp-theme-dark .dsp-loading-row td,
+html.dsp-theme-dark .dsp-error-row td,
+html.dsp-theme-dark .dsp-no-deals-row td { color: #9ea3a8; }
+html.dsp-theme-dark .dsp-error-row td { color: #ff7b7b; }
+
+/* Donate Modal Dark */
+html.dsp-theme-dark #dsp-donate-modal .dsp-modal-content { background-color: #2a2e34; border-color: #4f545c; color: #e0e1e2; }
+html.dsp-theme-dark .dsp-modal-close { color: #b4b9be; }
+html.dsp-theme-dark .dsp-modal-close:hover,
+html.dsp-theme-dark .dsp-modal-close:focus { color: #f0f1f2; }
+html.dsp-theme-dark #dsp-donate-modal .dsp-modal-content h2 { color: #f0f1f2; border-bottom-color: #4f545c; }
+html.dsp-theme-dark #dsp-donate-modal .dsp-donate-item p strong { color: #e0e1e2; }
+html.dsp-theme-dark #dsp-donate-modal .dsp-donate-item img { border-color: #4f545c; background-color: #f0f0f0; } /* Keep QR light */
+html.dsp-theme-dark #dsp-donate-modal .dsp-donate-item code { color: #b4b9be; background-color: #1e2227; }
+html.dsp-theme-dark #dsp-donate-modal .dsp-copy-feedback { color: #6af072; }
+
+/* Subscribe Modal Dark */
+html.dsp-theme-dark #dsp-subscribe-modal .dsp-modal-content { background-color: #2a2e34; border-color: #4f545c; color: #e0e1e2; } /* Apply dark bg */
+html.dsp-theme-dark #dsp-subscribe-modal .dsp-modal-content h2 { color: #f0f1f2; border-bottom-color: #4f545c; } /* Apply dark heading */
+html.dsp-theme-dark .dsp-subscribe-form input[type="email"] { background-color: #1e2227; border-color: #6c737c; color: #e0e1e2; }
+html.dsp-theme-dark .dsp-subscribe-status.dsp-success { background-color: #2b4f2d; border-color: #518e55; color: #b6eeb9; }
+html.dsp-theme-dark .dsp-subscribe-status.dsp-error { background-color: #5a2a2a; border-color: #a86c6c; color: #f5c0c0; }
+
+/* Pagination Dark */
+html.dsp-theme-dark .dsp-pagination .dsp-page-link { background-color: #3a3f46; border-color: #5a6068; color: #c8cacc; }
+html.dsp-theme-dark .dsp-pagination .dsp-page-link:hover { background-color: #4f545c; border-color: #6c737c; color: #e0e1e2; }
+html.dsp-theme-dark .dsp-pagination .dsp-page-item.dsp-disabled .dsp-page-link { background-color: #3a3f46; border-color: #5a6068; color: #7e8993; opacity: 0.5; }
+html.dsp-theme-dark .dsp-pagination .dsp-page-item.dsp-current-page .dsp-page-link { background-color: #3c8dbc; border-color: #3c8dbc; color: #fff; }
+
+/* Background Update Notice Dark */
+html.dsp-theme-dark .dsp-update-notice { background-color: #2a3f5c; color: #cde4ff; border-color: #4b6f9e; }
+html.dsp-theme-dark .dsp-dismiss-notice:hover,
+html.dsp-theme-dark .dsp-dismiss-notice:focus { background-color: rgba(255, 255, 255, 0.1); border-color: rgba(255, 255, 255, 0.2); }
+
+
 /* === DARK MODE STYLES END HERE === */
 
-/* Responsive Adjustments
+/* Responsive Adjustments */
 
 /* Wrapper for the table to allow horizontal scrolling on small screens */
 .dsp-table-wrapper {
@@ -554,7 +569,7 @@
 
 /* Make controls stack vertically on smaller screens */
 @media (max-width: 767px) {
-    .dsp-controls-area {
+    .dsp-controls-area { /* Assuming you have a wrapper div? If not, ignore */
         display: flex;
         flex-direction: column; /* Stack filters and actions */
         gap: 15px; /* Space between filters and actions block */
@@ -564,49 +579,55 @@
         display: flex;
         flex-wrap: wrap; /* Allow filter items to wrap */
         gap: 10px; /* Space between filter items */
+        /* Reset bottom border if stacking */
+        border-bottom: none;
+        padding-bottom: 0;
     }
 
     .dsp-filter-item {
         width: 100%; /* Make each filter group take full width */
         flex-basis: 100%;
         box-sizing: border-box; /* Include padding in width calculation */
+        margin-bottom: 10px; /* Add space between stacked filter items */
     }
-    .dsp-search-item input[type="text"] {
+    .dsp-filter-item input[type="text"] { /* Ensure text inputs adapt */
         width: 100%; /* Make search input take full width */
     }
-    .dsp-checkbox-group {
+     .dsp-filter-price-range {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        justify-content: space-between; /* Space out labels/inputs */
+     }
+     .dsp-filter-price-range label { flex-shrink: 0; margin-right: 5px;}
+     .dsp-filter-price-range input[type="number"] { width: 40%; } /* Adjust width */
+     .dsp-filter-price-range span { flex-shrink: 0; }
+
+    .dsp-filter-checkboxes {
          justify-content: flex-start; /* Align checkboxes left */
+         width: 100%;
     }
-    .dsp-checkbox-label {
+     #dsp-source-checkboxes { /* Allow source checkboxes to wrap */
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px 15px;
+     }
+    .dsp-filter-checkboxes label { /* New/LTD labels */
         margin-right: 15px; /* Adjust spacing */
     }
 
 
-    .dsp-actions {
+    .dsp-debug-controls {
         display: flex;
         flex-wrap: wrap; /* Allow button groups to wrap */
-        justify-content: space-between; /* Space out groups */
+        justify-content: flex-start; /* Align left */
         gap: 10px;
+        border-bottom: 1px solid #e5e5e5; /* Restore border */
+        padding-bottom: 10px;
+        margin-top: 15px; /* Add space after filters */
     }
-    .dsp-action-item {
-        flex-basis: auto; /* Allow items to size naturally */
-    }
-    .dsp-refresh-action {
-         flex-grow: 1; /* Allow refresh button area to take more space if needed */
-         display: flex;
-         align-items: center;
-         flex-wrap: wrap; /* Allow message to wrap below button */
-         gap: 5px 10px;
-    }
-    .dsp-meta-actions {
-         display: flex;
-         flex-wrap: wrap; /* Allow meta buttons to wrap */
-         gap: 5px; /* Space between meta buttons */
-         justify-content: flex-end; /* Align meta buttons right on mobile */
-    }
-    .dsp-meta-actions .dsp-button {
-        padding: 5px 8px; /* Slightly smaller buttons */
-    }
+    html.dsp-theme-dark .dsp-debug-controls { border-bottom-color: #4f545c; }
+
 
     /* Adjust status bar for better stacking */
     .dsp-status-bar {
@@ -614,8 +635,9 @@
         flex-direction: column; /* Stack status and last updated */
         align-items: flex-start; /* Align left */
         gap: 5px; /* Space between lines */
+        margin-top: 15px; /* Add space before table */
     }
-    .dsp-last-updated {
+    #dsp-last-updated { /* Corrected selector */
         float: none; /* Remove float */
         width: 100%; /* Take full width */
         text-align: left; /* Align text left */
@@ -648,14 +670,14 @@
             but horizontal scroll is often preferred over hiding data. */
          /* display: none; */ /* Example: Hide header - Not recommended generally */
      }
-     .dsp-meta-actions {
-          justify-content: flex-start; /* Align buttons left */
-     }
-     .dsp-meta-actions .dsp-button {
+     .dsp-debug-controls .dsp-button {
          flex-grow: 1; /* Make buttons take more space */
          text-align: center;
+         padding: 5px 8px; /* Slightly smaller buttons */
      }
+     .dsp-filter-price-range input[type="number"] { width: 35%; } /* Further reduce price input width */
 }
+
 /* --- Pagination --- */
 .dsp-pagination {
     margin-top: 20px;
@@ -720,28 +742,7 @@
     border-color: #007bff;
     cursor: default;
 }
-/* Dark Mode Pagination */
-.dsp-dark-mode .dsp-pagination .dsp-page-link {
-    background-color: #333;
-    border-color: #555;
-    color: #bbf;
-}
-.dsp-dark-mode .dsp-pagination .dsp-page-link:hover {
-    background-color: #444;
-    border-color: #666;
-    color: #ddf;
-}
-.dsp-dark-mode .dsp-pagination .dsp-page-item.dsp-disabled .dsp-page-link {
-    background-color: #333;
-    border-color: #555;
-    color: #777;
-    opacity: 0.5;
-}
-.dsp-dark-mode .dsp-pagination .dsp-page-item.dsp-current-page .dsp-page-link {
-    background-color: #0056b3;
-    border-color: #0056b3;
-    color: #fff;
-}
+
 /* --- Background Update Notice Styles --- */
 .dsp-update-notice {
     background-color: #eef7ff; /* Light blue background */
@@ -754,13 +755,6 @@
     display: flex; /* Use flexbox for alignment */
     justify-content: space-between; /* Space text and button */
     align-items: center; /* Vertically center items */
-}
-
-/* Dark Mode specific styles for the notice */
-.dsp-dark-mode .dsp-update-notice {
-    background-color: #2a3f5c; /* Darker blue background */
-    color: #cde4ff; /* Lighter blue text */
-    border-color: #4b6f9e; /* Darker blue border */
 }
 
 .dsp-dismiss-notice {
@@ -781,15 +775,26 @@
     border-color: rgba(0, 0, 0, 0.2);
     outline: none;
 }
-.dsp-dark-mode .dsp-dismiss-notice:hover,
-.dsp-dark-mode .dsp-dismiss-notice:focus {
-    background-color: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.2);
-}
+
+/* Price Filter Specific Styles */
 .dsp-filter-price-range label { margin-right: 5px; }
 .dsp-filter-price-range span { margin: 0 3px; }
 .dsp-price-input {
     width: 70px; /* Adjust as needed */
     padding: 5px;
     font-size: 0.9em;
+     border: 1px solid #8c8f94; /* WP input border */
+     border-radius: 3px;
+     background-color: #fff;
+     box-shadow: inset 0 1px 2px rgba(0,0,0,.07);
+     color: #2c3338;
+}
+/* Remove spinner buttons for number inputs if desired */
+.dsp-price-input::-webkit-outer-spin-button,
+.dsp-price-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.dsp-price-input[type=number] {
+  -moz-appearance: textfield; /* Firefox */
 }
