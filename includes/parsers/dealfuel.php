@@ -1,5 +1,5 @@
 <?php
-// File: includes/parsers/dealfuel.php
+// File: includes/parsers/dealfuel.php (v1.1.22 - Add is_ltd detection)
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
@@ -40,7 +40,7 @@ function parse_dealfuel_php($html, $base_url) {
         }
 
         // Fallback link/title source if primary failed
-        if ($link === '#' || $title === 'N/A') {
+        if (($link === '#' || !$link) || ($title === 'N/A' || !$title)) {
             $title_tag_direct_link = $xpath->query(".//h2[contains(@class, 'woocommerce-loop-product__title')]/a", $card)->item(0);
              if ($title_tag_direct_link) {
                   $link_raw = dsp_get_node_attribute($title_tag_direct_link, 'href');
@@ -58,28 +58,33 @@ function parse_dealfuel_php($html, $base_url) {
             $sale_price_tag = $xpath->query(".//ins//span[contains(@class, 'woocommerce-Price-amount')]", $price_container)->item(0);
             if ($sale_price_tag) { $price = dsp_get_node_text($sale_price_tag); }
             else {
-                // Try regular price (not inside <del> or <ins>)
                 $regular_price_tag = $xpath->query(".//span[contains(@class, 'woocommerce-Price-amount')][not(ancestor::del) and not(ancestor::ins)]", $price_container)->item(0);
                  if ($regular_price_tag) { $price = dsp_get_node_text($regular_price_tag); }
-                 else { // Final fallback: grab anything, trying to exclude <del> text
+                 else {
                      $full_price_text = dsp_get_node_text($price_container);
                      $original_price_node = $xpath->query(".//del", $price_container)->item(0);
-                     if($original_price_node) {
-                         $del_text = dsp_get_node_text($original_price_node);
-                         $full_price_text = trim(str_replace($del_text, '', $full_price_text));
-                     }
+                     if($original_price_node) { $del_text = dsp_get_node_text($original_price_node); $full_price_text = trim(str_replace($del_text, '', $full_price_text)); }
                      $price = $full_price_text ?: 'N/A';
                  }
             }
         }
 
         if ($link && $link !== '#' && $title && $title !== 'N/A') {
+            // *** NEW: LTD Check ***
+            $is_lifetime = false;
+            $title_check = is_string($title) && stripos($title,'lifetime') !== false;
+            $price_check = is_string($price) && stripos($price,'lifetime') !== false;
+            // DealFuel usually doesn't show description on list view
+            $is_lifetime = $title_check || $price_check;
+            // *** END LTD Check ***
+
             $deals[] = [
                 'title' => $title,
                 'price' => $price,
                 'link' => $link,
                 'source' => 'DealFuel',
-                'description' => ''
+                'description' => '', // Typically no description on DealFuel list view
+                'is_ltd' => $is_lifetime, // Add the flag
             ];
         } else {
              error_log("DSP Parser DealFuel: Skipping card due to missing link/title. Link: " . ($link ?? 'null') . " Title: " . ($title ?? 'null'));

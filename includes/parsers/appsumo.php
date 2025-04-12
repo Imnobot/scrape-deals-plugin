@@ -1,5 +1,5 @@
 <?php
-// File: includes/parsers/appsumo.php
+// File: includes/parsers/appsumo.php (v1.1.22 - Add is_ltd detection)
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
@@ -50,12 +50,21 @@ function parse_appsumo_php($html, $base_url) {
         $description = dsp_get_node_text($desc_tag);
 
         if ($link && $link !== '#' && $title) {
+            // *** NEW: LTD Check ***
+            $is_lifetime = false;
+            $title_check = is_string($title) && stripos($title,'lifetime') !== false;
+            $price_check = is_string($price) && stripos($price,'lifetime') !== false;
+            $desc_check = is_string($description) && stripos($description, 'lifetime') !== false; // Optional desc check
+            $is_lifetime = $title_check || $price_check || $desc_check;
+            // *** END LTD Check ***
+
             $deals[] = [
                 'title' => $title,
                 'price' => $price ?: 'N/A',
                 'link' => $link,
                 'source' => 'AppSumo',
-                'description' => $description ?: ''
+                'description' => $description ?: '',
+                'is_ltd' => $is_lifetime, // Add the flag
             ];
         } else {
              error_log("DSP Parser AppSumo: Skipping card due to missing link/title. Link: " . ($link ?? 'null') . " Title: " . ($title ?? 'null'));
