@@ -3,7 +3,7 @@
  * Plugin Name:       Deal Scraper Plugin
  * Plugin URI:        https://none.com
  * Description:       Scrapes deal websites and displays them via a shortcode. Includes debug logging, dark mode, email subscription. [deal_scraper_display]
- * Version:           1.1.26 // Fix: Dark mode FOUC. Handle no sources selected.
+ * Version:           1.1.29 // Performance: Add explicit price_numeric update routine
  * Author:            ᕦ(ò_óˇ)ᕤ
  * Author URI:        https://none.com
  * License:           GPL v2 or later
@@ -23,8 +23,9 @@ define( 'DSP_OPTION_NAME', 'dsp_settings' );
 define( 'DSP_EMAIL_CRON_HOOK', 'dsp_daily_email_check' ); // Email check hook (remains daily for now)
 define( 'DSP_LAST_EMAIL_OPTION', 'dsp_last_email_send_time' );
 define( 'DSP_ITEMS_PER_PAGE', 25 ); // Default items per page for frontend display
-define( 'DSP_VERSION', '1.1.26' ); // Use this for assets & DB version check
+define( 'DSP_VERSION', '1.1.29' ); // Use this for assets & DB version check
 define( 'DSP_DB_VERSION_OPTION', 'dsp_db_version' ); // Option to store DB schema version
+define( 'DSP_SOURCE_LIST_TRANSIENT', 'dsp_enabled_sources_list' ); // Transient key
 
 // --- Load Files ---
 require_once DSP_PLUGIN_DIR . 'includes/db-handler.php';
@@ -61,23 +62,117 @@ function dsp_get_default_config() {
      ];
 }
 /** Gets the configured scraping sites. */
-function dsp_get_config() { $options = get_option(DSP_OPTION_NAME); $defaults = dsp_get_default_config(); $sites_config = isset($options['sites']) && is_array($options['sites']) ? $options['sites'] : $defaults['sites']; $validated_sites = []; if (is_array($sites_config)) { foreach ($sites_config as $site_data) { if ( is_array($site_data) && isset($site_data['name'], $site_data['url'], $site_data['parser_file']) && is_string($site_data['name']) && $site_data['name'] !== '' && is_string($site_data['url']) && $site_data['url'] !== '' && is_string($site_data['parser_file']) && $site_data['parser_file'] !== '' ) { $site_data['enabled'] = isset($site_data['enabled']) ? (bool) $site_data['enabled'] : false; $site_data['last_status'] = isset($site_data['last_status']) ? (string)$site_data['last_status'] : ''; $site_data['last_run_time'] = isset($site_data['last_run_time']) ? (int)$site_data['last_run_time'] : 0; $validated_sites[] = $site_data; } } } if (empty($validated_sites) && !empty($sites_config)) { error_log("DSP get_config Warning: No valid sites found after checking saved options. Returning empty array."); } elseif (empty($validated_sites) && empty($sites_config)) { error_log("DSP get_config Info: No sites found in options, returning defaults."); return $defaults['sites']; } return $validated_sites; }
+function dsp_get_config() {
+    $options = get_option(DSP_OPTION_NAME);
+    $defaults = dsp_get_default_config();
+    $sites_config = isset($options['sites']) && is_array($options['sites']) ? $options['sites'] : $defaults['sites'];
+    $validated_sites = [];
+    if (is_array($sites_config)) {
+        foreach ($sites_config as $site_data) {
+            if ( is_array($site_data)
+                 && isset($site_data['name'], $site_data['url'], $site_data['parser_file'])
+                 && is_string($site_data['name']) && $site_data['name'] !== ''
+                 && is_string($site_data['url']) && $site_data['url'] !== ''
+                 && is_string($site_data['parser_file']) && $site_data['parser_file'] !== '' )
+            {
+                $site_data['enabled'] = isset($site_data['enabled']) ? (bool) $site_data['enabled'] : false;
+                $site_data['last_status'] = isset($site_data['last_status']) ? (string)$site_data['last_status'] : '';
+                $site_data['last_run_time'] = isset($site_data['last_run_time']) ? (int)$site_data['last_run_time'] : 0;
+                $validated_sites[] = $site_data;
+            }
+        }
+    }
+
+    if (empty($validated_sites) && !empty($sites_config)) {
+        error_log("DSP get_config Warning: No valid sites found after checking saved options. Returning empty array.");
+    } elseif (empty($validated_sites) && empty($sites_config)) {
+        error_log("DSP get_config Info: No sites found in options, returning defaults.");
+        return $defaults['sites'];
+    }
+    return $validated_sites;
+}
+
 
 // --- Activation / Deactivation ---
 register_activation_hook( __FILE__, 'dsp_activate_plugin' );
 /** Plugin activation hook. */
-function dsp_activate_plugin() { error_log("DSP Activation: Running activation routine."); DSP_DB_Handler::create_table(); update_option( DSP_DB_VERSION_OPTION, DSP_VERSION ); $options = get_option( DSP_OPTION_NAME, [] ); if ( ! is_array( $options ) ) { $options = []; } $defaults = dsp_get_default_config(); $merged_options = wp_parse_args( $options, $defaults ); if (!isset($merged_options['sites']) || !is_array($merged_options['sites'])) { $merged_options['sites'] = $defaults['sites']; } if (!isset($merged_options['email_recipients']) || !is_array($merged_options['email_recipients'])) { $merged_options['email_recipients'] = $defaults['email_recipients']; } $salt_exists = isset( $merged_options['unsubscribe_salt'] ) && is_string( $merged_options['unsubscribe_salt'] ) && strlen( $merged_options['unsubscribe_salt'] ) > 32; if ( ! $salt_exists ) { $merged_options['unsubscribe_salt'] = wp_generate_password( 64, true, true ); error_log('DSP Activation: Generated new secure unsubscribe salt.'); } update_option( DSP_OPTION_NAME, $merged_options ); $fetch_frequency = isset($merged_options['fetch_frequency']) ? $merged_options['fetch_frequency'] : $defaults['fetch_frequency']; $allowed_schedules = ['twicedaily', 'daily']; if (!in_array($fetch_frequency, $allowed_schedules)) { $fetch_frequency = 'daily'; } wp_clear_scheduled_hook( DSP_CRON_HOOK ); if ( ! wp_next_scheduled( DSP_CRON_HOOK ) ) { wp_schedule_event( time() + 60, $fetch_frequency, DSP_CRON_HOOK ); error_log("DSP Activation: Scheduled main fetch cron ({DSP_CRON_HOOK}) frequency: {$fetch_frequency}"); } else { error_log("DSP Activation Error: Main fetch cron ({DSP_CRON_HOOK}) still scheduled after clearing attempt."); } if ( ! wp_next_scheduled( DSP_EMAIL_CRON_HOOK ) ) { wp_schedule_event( time() + 300, 'daily', DSP_EMAIL_CRON_HOOK ); error_log('DSP Activation: Scheduled daily email check (' . DSP_EMAIL_CRON_HOOK . ')'); } if ( get_option('dsp_last_fetch_time') === false ) { update_option('dsp_last_fetch_time', 0, 'no'); } if ( get_option(DSP_LAST_EMAIL_OPTION) === false ) { update_option(DSP_LAST_EMAIL_OPTION, 0, 'no'); } error_log("DSP Activation: Routine complete."); }
+function dsp_activate_plugin() {
+    error_log("DSP Activation: Running activation routine.");
+    DSP_DB_Handler::create_table(); // Attempt schema update with dbDelta
+    DSP_DB_Handler::add_ltd_column_and_index(); // Explicitly ensure LTD column/index
+    DSP_DB_Handler::add_price_numeric_column_and_index(); // Explicitly ensure price_numeric column/index
+    update_option( DSP_DB_VERSION_OPTION, DSP_VERSION ); // Update DB version after checks
+    $options = get_option( DSP_OPTION_NAME, [] );
+    if ( ! is_array( $options ) ) { $options = []; }
+    $defaults = dsp_get_default_config();
+    $merged_options = wp_parse_args( $options, $defaults );
+    // Ensure 'sites' and 'email_recipients' are arrays
+    if (!isset($merged_options['sites']) || !is_array($merged_options['sites'])) { $merged_options['sites'] = $defaults['sites']; }
+    if (!isset($merged_options['email_recipients']) || !is_array($merged_options['email_recipients'])) { $merged_options['email_recipients'] = $defaults['email_recipients']; }
+    // Ensure unsubscribe salt exists
+    $salt_exists = isset( $merged_options['unsubscribe_salt'] ) && is_string( $merged_options['unsubscribe_salt'] ) && strlen( $merged_options['unsubscribe_salt'] ) > 32;
+    if ( ! $salt_exists ) { $merged_options['unsubscribe_salt'] = wp_generate_password( 64, true, true ); error_log('DSP Activation: Generated new secure unsubscribe salt.'); }
+    update_option( DSP_OPTION_NAME, $merged_options );
+    // Schedule Crons
+    $fetch_frequency = isset($merged_options['fetch_frequency']) ? $merged_options['fetch_frequency'] : $defaults['fetch_frequency'];
+    $allowed_schedules = ['twicedaily', 'daily'];
+    if (!in_array($fetch_frequency, $allowed_schedules)) { $fetch_frequency = 'daily'; }
+    wp_clear_scheduled_hook( DSP_CRON_HOOK );
+    if ( ! wp_next_scheduled( DSP_CRON_HOOK ) ) { wp_schedule_event( time() + 60, $fetch_frequency, DSP_CRON_HOOK ); error_log("DSP Activation: Scheduled main fetch cron ({DSP_CRON_HOOK}) frequency: {$fetch_frequency}"); }
+    else { error_log("DSP Activation Error: Main fetch cron ({DSP_CRON_HOOK}) still scheduled after clearing attempt."); }
+    if ( ! wp_next_scheduled( DSP_EMAIL_CRON_HOOK ) ) { wp_schedule_event( time() + 300, 'daily', DSP_EMAIL_CRON_HOOK ); error_log('DSP Activation: Scheduled daily email check (' . DSP_EMAIL_CRON_HOOK . ')'); }
+    // Ensure legacy option exists if needed
+    if ( get_option('dsp_last_fetch_time') === false ) { update_option('dsp_last_fetch_time', 0, 'no'); }
+    if ( get_option(DSP_LAST_EMAIL_OPTION) === false ) { update_option(DSP_LAST_EMAIL_OPTION, 0, 'no'); }
+    // Clear transient on activation
+    delete_transient( DSP_SOURCE_LIST_TRANSIENT );
+    error_log("DSP Activation: Routine complete.");
+}
+
 register_deactivation_hook( __FILE__, 'dsp_deactivate_plugin' );
 /** Plugin deactivation hook. */
-function dsp_deactivate_plugin() { wp_clear_scheduled_hook( DSP_CRON_HOOK ); wp_clear_scheduled_hook( DSP_EMAIL_CRON_HOOK ); error_log('DSP Deactivation: Cleared scheduled hooks.'); }
+function dsp_deactivate_plugin() {
+    wp_clear_scheduled_hook( DSP_CRON_HOOK );
+    wp_clear_scheduled_hook( DSP_EMAIL_CRON_HOOK );
+    delete_transient( DSP_SOURCE_LIST_TRANSIENT );
+    error_log('DSP Deactivation: Cleared scheduled hooks and source list transient.');
+}
 
 // --- DB Upgrade Routine ---
 /** Checks the DB version and runs upgrades if needed. */
-function dsp_check_db_updates() { $current_db_version = get_option( DSP_DB_VERSION_OPTION, '0' ); if ( version_compare( $current_db_version, DSP_VERSION, '<' ) ) { error_log("DSP DB Update Check: Current DB version {$current_db_version} is older than plugin version " . DSP_VERSION . ". Running updates."); if ( version_compare( $current_db_version, '1.1.22', '<' ) ) { error_log("DSP DB Update: Attempting to add 'is_ltd' column and index (Upgrade to 1.1.22+)..."); DSP_DB_Handler::add_ltd_column_and_index(); } /* Add future upgrade steps here */ update_option( DSP_DB_VERSION_OPTION, DSP_VERSION ); error_log("DSP DB Update Check: DB version updated to " . DSP_VERSION); } }
-add_action( 'admin_init', 'dsp_check_db_updates' );
+function dsp_check_db_updates() {
+    $current_db_version = get_option( DSP_DB_VERSION_OPTION, '0' );
+    if ( version_compare( $current_db_version, DSP_VERSION, '<' ) ) {
+        error_log("DSP DB Update Check: Current DB version {$current_db_version} is older than plugin version " . DSP_VERSION . ". Running updates.");
+        // Run dbDelta first to handle schema changes defined in create_table()
+        DSP_DB_Handler::create_table();
+        // Run specific upgrade steps if needed for versions between current DB and target plugin version
+        // Example: Ensure LTD column exists (for upgrades before 1.1.22)
+        if ( version_compare( $current_db_version, '1.1.22', '<' ) ) {
+            error_log("DSP DB Update: Running specific upgrade steps for < 1.1.22...");
+            DSP_DB_Handler::add_ltd_column_and_index();
+        }
+        // *** NEW: Explicitly ensure price_numeric column exists (for upgrades before 1.1.28/1.1.29) ***
+        if ( version_compare( $current_db_version, '1.1.29', '<' ) ) {
+             error_log("DSP DB Update: Running specific upgrade steps for < 1.1.29...");
+             DSP_DB_Handler::add_price_numeric_column_and_index();
+        }
+        // Add future upgrade steps here:
+        /*
+        if ( version_compare( $current_db_version, 'X.Y.Z', '<' ) ) {
+            // Do something for upgrade to X.Y.Z
+        }
+        */
+        // Update the DB version to the current plugin version AFTER updates run
+        update_option( DSP_DB_VERSION_OPTION, DSP_VERSION );
+        error_log("DSP DB Update Check: DB version updated to " . DSP_VERSION);
+    }
+}
+add_action( 'plugins_loaded', 'dsp_check_db_updates' ); // Run earlier than admin_init
 
 // --- Crons ---
-add_action( DSP_CRON_HOOK, 'dsp_run_deal_fetch_cron' ); add_action( DSP_EMAIL_CRON_HOOK, 'dsp_check_and_send_scheduled_email' );
+add_action( DSP_CRON_HOOK, 'dsp_run_deal_fetch_cron' );
+add_action( DSP_EMAIL_CRON_HOOK, 'dsp_check_and_send_scheduled_email' );
 
 // --- Shortcode ---
 add_shortcode( 'deal_scraper_display', 'dsp_render_shortcode' );
@@ -89,7 +184,7 @@ function dsp_enqueue_assets() {
     global $post;
     // Only load assets if the shortcode exists on the current page
     if ( is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'deal_scraper_display' ) ) {
-        $plugin_version = defined('DSP_VERSION') ? DSP_VERSION : '1.1.26'; // Use defined version
+        $plugin_version = defined('DSP_VERSION') ? DSP_VERSION : '1.1.29'; // Use defined version
         wp_enqueue_style( 'dsp-style', DSP_PLUGIN_URL . 'assets/css/deal-display.css', [], $plugin_version );
         // Make sure jQuery is loaded before our script
         wp_enqueue_script( 'dsp-script', DSP_PLUGIN_URL . 'assets/js/deal-display.js', ['jquery'], $plugin_version, true );
@@ -99,20 +194,27 @@ function dsp_enqueue_assets() {
         $defaults = dsp_get_default_config();
         $merged_options = wp_parse_args($options, $defaults);
 
-        // Get enabled sources for JS filters
-        $enabled_sources = [];
-        $configured_sites = dsp_get_config(); // Get validated sites
-        if ( is_array($configured_sites) && !empty($configured_sites) ) {
-            foreach ($configured_sites as $site_data) {
-                if ( !empty($site_data['enabled']) && isset($site_data['name']) && $site_data['name'] !== '' ) {
-                    $enabled_sources[] = $site_data['name'];
-                }
-            }
+        // --- Use Transient Cache for Enabled Sources ---
+        $enabled_sources = get_transient( DSP_SOURCE_LIST_TRANSIENT );
+        if ( false === $enabled_sources ) {
+             // Cache miss: Generate the list
+             $enabled_sources = [];
+             $configured_sites = dsp_get_config(); // Get validated sites
+             if ( is_array($configured_sites) && !empty($configured_sites) ) {
+                 foreach ($configured_sites as $site_data) {
+                     if ( !empty($site_data['enabled']) && isset($site_data['name']) && $site_data['name'] !== '' ) {
+                         $enabled_sources[] = $site_data['name'];
+                     }
+                 }
+             }
+             sort($enabled_sources); // Sort alphabetically for consistent display
+             // Store in transient for 15 minutes
+             set_transient( DSP_SOURCE_LIST_TRANSIENT, $enabled_sources, 15 * MINUTE_IN_SECONDS );
         }
-        sort($enabled_sources); // Sort alphabetically for consistent display
+        // --- END Transient Cache ---
 
         // Get initial total deals count for pagination setup
-        $count_data = DSP_DB_Handler::get_deals(['items_per_page' => 0]);
+        $count_data = DSP_DB_Handler::get_deals(['items_per_page' => 0]); // Fetch count only
         $total_deals_count = $count_data['total_deals'] ?? 0;
 
         // Prepare data for localization (used by deal-display.js)
@@ -164,8 +266,7 @@ function dsp_enqueue_assets() {
             'no_sources_selected_text' => __('Please select at least one source to display deals.', 'deal-scraper-plugin'),
 
             // Config data for JS
-            'config_sources' => $enabled_sources,
-            // 'dark_mode_default' => $merged_options['dark_mode_default'], // No longer needed here
+            'config_sources' => $enabled_sources, // Use cached or generated list
             'email_notifications_enabled' => (bool) $merged_options['email_enabled'],
             'show_debug_button' => (bool) $merged_options['show_debug_button'],
             'refresh_button_access' => $merged_options['refresh_button_access'],
@@ -181,7 +282,7 @@ add_action( 'admin_enqueue_scripts', 'dsp_enqueue_admin_assets' );
 /** Enqueues scripts and styles for the admin settings page. */
 function dsp_enqueue_admin_assets( $hook ) {
     if ( 'settings_page_deal_scraper_settings' !== $hook ) { return; }
-    $plugin_version = defined('DSP_VERSION') ? DSP_VERSION : '1.1.26'; // Use defined version
+    $plugin_version = defined('DSP_VERSION') ? DSP_VERSION : '1.1.29'; // Use defined version
     wp_enqueue_script( 'dsp-admin-script', DSP_PLUGIN_URL . 'assets/js/admin-settings.js', ['jquery', 'wp-util'], $plugin_version, true );
     wp_localize_script( 'dsp-admin-script', 'dsp_admin_ajax_obj', [
         'ajax_url' => admin_url( 'admin-ajax.php' ),
@@ -269,7 +370,7 @@ function dsp_ajax_get_deals_handler() {
     }
 
     // Process Deals for Display
-    $timestamp_for_is_new = $last_successful_run_time;
+    $timestamp_for_is_new = $last_successful_run_time > 0 ? $last_successful_run_time : dsp_get_last_successful_run_timestamp(); // Ensure we use a valid time for 'new' check
     $processed_deals = dsp_process_deals_for_ajax( $fetched_deals, $timestamp_for_is_new );
 
     // Get the most recent success time for display
@@ -322,6 +423,7 @@ function dsp_ajax_subscribe_email_handler() {
     foreach ($current_recipients as $existing_email) { if (strcasecmp($existing_email, $email_to_add) === 0) { $email_exists = true; break; } }
     if ( $email_exists ) { wp_send_json_success(['message' => __('This email address is already subscribed.', 'deal-scraper-plugin')]); return; }
     $current_recipients[] = $email_to_add; $merged_options['email_recipients'] = array_values(array_unique($current_recipients));
+    // Clear source list transient when recipients change? Probably not needed.
     $update_result = update_option( DSP_OPTION_NAME, $merged_options );
     if ( $update_result ) { wp_send_json_success(['message' => __('Successfully subscribed!', 'deal-scraper-plugin')]); }
     else { $options_after = get_option(DSP_OPTION_NAME); if (is_array($options_after) && isset($options_after['email_recipients']) && is_array($options_after['email_recipients'])) { $already_in = false; foreach($options_after['email_recipients'] as $existing_after) { if (strcasecmp($existing_after, $email_to_add) === 0) {$already_in = true; break;} } if ($already_in) { wp_send_json_success(['message' => __('Already subscribed (verified).', 'deal-scraper-plugin')]); return; } } error_log("DSP Subscribe Error: update_option failed for " . DSP_OPTION_NAME); wp_send_json_error(['message' => __('Subscription failed (server error).', 'deal-scraper-plugin')], 500); }
@@ -335,10 +437,20 @@ function dsp_ajax_send_manual_email_handler() {
     $options = get_option( DSP_OPTION_NAME ); $defaults = dsp_get_default_config(); $merged_options = wp_parse_args( $options, $defaults );
     $recipients = $merged_options['email_recipients'] ?? []; if ( ! is_array( $recipients ) || empty( $recipients ) ) { wp_send_json_error( ['message' => __( 'No recipients configured.', 'deal-scraper-plugin' )] ); return; }
     $valid_recipients = array_filter( $recipients, 'is_email' ); if ( empty( $valid_recipients ) ) { wp_send_json_error( ['message' => __( 'No valid recipients found.', 'deal-scraper-plugin' )] ); return; }
-    // Fetch deals for email (e.g., last 24h or a fixed number)
-    $last_day_ts = time() - DAY_IN_SECONDS;
-    $deals_data = DSP_DB_Handler::get_deals(['newer_than_ts' => $last_day_ts, 'orderby' => 'first_seen', 'order' => 'DESC', 'items_per_page'=> 50]); // Get deals from last 24h
-    $deals = $deals_data['deals'] ?? []; if ( empty( $deals ) ) { wp_send_json_success( ['message' => __( 'No new deals found in the last 24 hours to email.', 'deal-scraper-plugin' )] ); return; }
+
+    // Fetch the 10 most recently SEEN deals for the manual email
+    $deals_data = DSP_DB_Handler::get_deals([
+        'orderby' => 'first_seen',      // Sort by when they were first seen
+        'order'   => 'DESC',            // Get the newest first
+        'items_per_page'=> 10           // Limit to exactly 10
+        // No 'newer_than_ts' filter needed for manual send
+    ]);
+    $deals = $deals_data['deals'] ?? [];
+
+    if ( empty( $deals ) ) {
+        wp_send_json_success( ['message' => __( 'No deals found in the database to send.', 'deal-scraper-plugin' )] );
+        return;
+    }
     if ( ! function_exists('dsp_format_deals_email') ) { wp_send_json_error( ['message' => __( 'Email format function missing.', 'deal-scraper-plugin' )], 500 ); return; }
     $email_subject = sprintf( __( '%s Deal Digest (Manual Send)', 'deal-scraper-plugin' ), get_bloginfo( 'name' ) );
     $email_body_html = dsp_format_deals_email($deals); if (empty($email_body_html)) { wp_send_json_error( ['message' => __( 'Failed to generate email content.', 'deal-scraper-plugin' )] ); return; }
@@ -347,7 +459,7 @@ function dsp_ajax_send_manual_email_handler() {
     foreach ( $valid_recipients as $recipient_email ) { $unsubscribe_link = dsp_generate_unsubscribe_link($recipient_email); $final_email_body = $email_body_html . dsp_get_unsubscribe_footer_html($unsubscribe_link); $sent = wp_mail( $recipient_email, $email_subject, $final_email_body, $headers ); if ($sent) $sent_count++; else $fail_count++; }
     if ( $sent_count > 0 && $fail_count === 0 ) { wp_send_json_success( [ 'message' => sprintf( _n( 'Manual email sent to %d recipient.', 'Manual email sent to %d recipients.', $sent_count, 'deal-scraper-plugin' ), $sent_count ) ] ); }
     elseif ( $sent_count > 0 && $fail_count > 0 ) { wp_send_json_success( [ 'message' => sprintf( __( 'Sent to %d, failed for %d. Check logs.', 'deal-scraper-plugin' ), $sent_count, $fail_count ) ] ); }
-    else { global $phpmailer; $error_info = isset($phpmailer) && is_object($phpmailer) ? $phpmailer->ErrorInfo : ''; error_log("DSP Manual Email Error: Failed sending. Last wp_mail error: " . $error_info); wp_send_json_error( [ 'message' => __( 'Failed to send emails. Check logs/WP mail config.', 'deal-scraper-plugin' ) . ($error_info ? ' Last Error: ' . esc_html($error_info) : '') ] ); }
+    else { global $phpmailer; $error_info = isset($phpmailer) && $phpmailer instanceof PHPMailer\PHPMailer\PHPMailer ? $phpmailer->ErrorInfo : ''; error_log("DSP Manual Email Error: Failed sending. Last wp_mail error: " . $error_info); wp_send_json_error( [ 'message' => __( 'Failed to send emails. Check logs/WP mail config.', 'deal-scraper-plugin' ) . ($error_info ? ' Last Error: ' . esc_html($error_info) : '') ] ); }
 }
 
 
@@ -399,40 +511,26 @@ function dsp_get_last_successful_run_timestamp() {
         foreach ( $sites as $site_data ) {
             $run_time = (int) ($site_data['last_run_time'] ?? 0);
             $status = strtolower( $site_data['last_status'] ?? '' );
+            // Check if status starts with 'success'
             if ( $run_time > $latest_success_time && strpos( $status, 'success' ) === 0 ) {
                 $latest_success_time = $run_time;
             }
         }
     }
-    // Fallback to the global last_fetch_time if no individual success times are found/more recent
+    // Consider the global legacy last_fetch_time as a potential fallback, but prioritize site status
     $global_last_fetch = get_option('dsp_last_fetch_time', 0);
     return max($latest_success_time, (int)$global_last_fetch);
 }
 
-// *** NEW: Add Dark Mode Script to Head ***
+// --- Add Dark Mode Script to Head ---
 add_action( 'wp_head', 'dsp_add_dark_mode_head_script' );
-/**
- * Adds an inline script to the head to apply dark mode class early.
- */
+/** Adds an inline script to the head to apply dark mode class early. */
 function dsp_add_dark_mode_head_script() {
-    // We only need this on the frontend
-    if ( is_admin() ) {
-        return;
-    }
-
-    // Get the setting efficiently
-    $options = get_option( DSP_OPTION_NAME );
-    $defaults = dsp_get_default_config();
-    // Use default if not set
+    if ( is_admin() ) return; // Only frontend
+    $options = get_option( DSP_OPTION_NAME ); $defaults = dsp_get_default_config();
     $mode = isset( $options['dark_mode_default'] ) ? $options['dark_mode_default'] : $defaults['dark_mode_default'];
-
-    // Only output script if mode is 'dark' or 'auto'
-    if ($mode !== 'dark' && $mode !== 'auto') {
-        return;
-    }
-
-    // Use a unique class name for the HTML element to avoid conflicts
-    $dark_mode_class = 'dsp-theme-dark';
+    if ($mode !== 'dark' && $mode !== 'auto') return; // Only output if needed
+    $dark_mode_class = 'dsp-theme-dark'; // Consistent class name
     ?>
     <script>
         (function() {
@@ -440,26 +538,11 @@ function dsp_add_dark_mode_head_script() {
                 const mode = '<?php echo esc_js( $mode ); ?>';
                 const className = '<?php echo esc_js( $dark_mode_class ); ?>';
                 let applyDark = false;
-
-                if (mode === 'dark') {
-                    applyDark = true;
-                } else if (mode === 'auto') {
-                    const hour = new Date().getHours();
-                    // Apply dark mode from 6 PM (18) to 6 AM (exclusive)
-                    if (hour >= 18 || hour < 6) {
-                        applyDark = true;
-                    }
-                }
-
-                if (applyDark) {
-                    document.documentElement.classList.add(className);
-                } else {
-                     // Ensure class is removed if switching from dark/auto to light
-                     document.documentElement.classList.remove(className);
-                }
-            } catch (e) {
-                console.error('DSP Dark Mode Script Error:', e);
-            }
+                if (mode === 'dark') { applyDark = true; }
+                else if (mode === 'auto') { const hour = new Date().getHours(); if (hour >= 18 || hour < 6) { applyDark = true; } }
+                if (applyDark) { document.documentElement.classList.add(className); }
+                else { document.documentElement.classList.remove(className); }
+            } catch (e) { console.error('DSP Dark Mode Script Error:', e); }
         })();
     </script>
     <?php

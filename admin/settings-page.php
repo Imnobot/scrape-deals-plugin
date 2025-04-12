@@ -1,5 +1,5 @@
 <?php
-// File: admin/settings-page.php (v1.1.21 - Add Import/Export UI & Logic, Zip Export)
+// File: admin/settings-page.php (v1.1.28 - Clear source transient on save)
 
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
@@ -61,7 +61,7 @@ function dsp_render_fetch_frequency_field() { $options = get_option( DSP_OPTION_
 function dsp_render_purge_enabled_field() { $options = get_option( DSP_OPTION_NAME ); $defaults = dsp_get_default_config(); $value = isset( $options['purge_enabled'] ) ? (bool) $options['purge_enabled'] : ($defaults['purge_enabled'] ?? false); ?><label><input type="checkbox" name="<?php echo esc_attr( DSP_OPTION_NAME ); ?>[purge_enabled]" value="1" <?php checked( $value, true ); ?> /> <?php esc_html_e( 'Automatically delete old deals from the database.', 'deal-scraper-plugin' ); ?></label><p class="description"><?php esc_html_e( 'When enabled, deals older than the specified age below will be deleted during the regular cron run.', 'deal-scraper-plugin' ); ?></p><?php }
 function dsp_render_purge_max_age_days_field() { $options = get_option( DSP_OPTION_NAME ); $defaults = dsp_get_default_config(); $value = isset( $options['purge_max_age_days'] ) ? intval( $options['purge_max_age_days'] ) : ($defaults['purge_max_age_days'] ?? 90); $value = max(1, $value); ?><input type="number" min="1" step="1" name="<?php echo esc_attr( DSP_OPTION_NAME ); ?>[purge_max_age_days]" value="<?php echo esc_attr( $value ); ?>" class="small-text" /> <?php esc_html_e( 'days', 'deal-scraper-plugin' ); ?><p class="description"><?php esc_html_e( 'Enter the maximum age (in days) for deals to keep. Deals first seen before this many days ago will be deleted if auto-purge is enabled.', 'deal-scraper-plugin' ); ?></p><?php }
 
-// --- Sanitization Function (MODIFIED - Handle Import File (JSON or Zip)) ---
+// --- Sanitization Function (MODIFIED - Handle Import File, Clear Transient) ---
 function dsp_sanitize_settings( $input ) {
     // Get current settings *before* they are updated
     $old_options = get_option( DSP_OPTION_NAME, [] );
@@ -71,6 +71,7 @@ function dsp_sanitize_settings( $input ) {
     $output = $old_options;
     $defaults = dsp_get_default_config();
     $import_processed = false; // Flag to track if import happened
+    $sources_changed = false;  // Flag to track if source list is modified
 
     // --- Handle File Import (JSON or Zip) ---
     if ( isset( $_FILES['dsp_import_file'] ) && !empty( $_FILES['dsp_import_file']['tmp_name'] ) && $_FILES['dsp_import_file']['error'] === UPLOAD_ERR_OK ) {
@@ -178,7 +179,10 @@ function dsp_sanitize_settings( $input ) {
                         }
 
                         // *** Replace the sites in output with the validated imported data ***
-                        $output['sites'] = $validated_imported_sites;
+                        if (!empty($validated_imported_sites)) {
+                            $output['sites'] = $validated_imported_sites;
+                            $sources_changed = true; // Mark that sources were changed
+                        }
                         $import_processed = true; // Mark import as done for this save
                     }
                 } // End JSON content processing
@@ -190,25 +194,45 @@ function dsp_sanitize_settings( $input ) {
     // --- Sanitize Manually Edited/Added Sources (Only if no import happened) ---
     if (!$import_processed && isset($input['sites'])) {
         $current_sites = $old_options['sites'] ?? []; $current_sites_map = []; if (is_array($current_sites)) { foreach ($current_sites as $index => $site) { $current_sites_map[$index] = $site; } }
-        $sanitized_sites = [];
+        $sanitized_sites = []; $original_indices = array_keys($input['sites']); // Get the keys submitted
         if ( is_array( $input['sites'] ) ) {
             $available_parsers = []; $parser_dir = DSP_PLUGIN_DIR . 'includes/parsers/'; if ( is_dir( $parser_dir ) && is_readable( $parser_dir ) ) { $parser_files = glob( $parser_dir . '*.php' ); if ( $parser_files ) { foreach ( $parser_files as $parser_file_path ) { $base_name = basename( $parser_file_path, '.php' ); if ( !empty($base_name) && strpos($base_name, '.') === false ) { $available_parsers[] = $base_name; } } } }
-            $submitted_sites = array_values($input['sites']);
-            foreach ( $submitted_sites as $index => $site_data ) {
-                if ( ! is_array( $site_data ) ) continue;
+
+            foreach ( $original_indices as $index ) {
+                if (!isset($input['sites'][$index]) || !is_array($input['sites'][$index])) continue; // Skip if not set or not array
+                $site_data = $input['sites'][$index];
+
                 $name = isset($site_data['name']) ? sanitize_text_field( wp_unslash( $site_data['name'] ) ) : ''; $url = isset($site_data['url']) ? esc_url_raw( wp_unslash( $site_data['url'] ) ) : ''; $parser_file = isset($site_data['parser_file']) ? sanitize_key( wp_unslash( $site_data['parser_file'] ) ) : ''; $enabled = isset( $site_data['enabled'] ) && ( $site_data['enabled'] == '1' || $site_data['enabled'] === true );
-                if ( ! empty($parser_file) && ! in_array( $parser_file, $available_parsers, true ) ) { add_settings_error('dsp_sites', 'dsp_invalid_parser_selection', sprintf(__('Invalid parser file (`%s`) for source `%s`. Row skipped.', 'deal-scraper-plugin'), esc_html($parser_file), esc_html($name)), 'warning'); continue; }
-                if ( ! empty( $name ) && ! empty( $url ) && ! empty( $parser_file ) ) {
-                     $existing_site_data = $current_sites_map[$index] ?? null;
-                     $sanitized_site = [ 'name' => $name, 'url' => $url, 'parser_file' => $parser_file, 'enabled' => $enabled, 'last_status' => isset($existing_site_data['last_status']) ? $existing_site_data['last_status'] : '', 'last_run_time' => isset($existing_site_data['last_run_time']) ? (int)$existing_site_data['last_run_time'] : 0, ];
-                     $sanitized_sites[] = $sanitized_site;
+                // Basic check for required fields
+                if ( empty( $name ) || empty( $url ) || empty( $parser_file ) ) {
+                     add_settings_error('dsp_sites', 'dsp_missing_fields', sprintf(__('Missing required fields (Name, URL, Parser) for one source. Row skipped.', 'deal-scraper-plugin')), 'warning');
+                     continue; // Skip this row if required fields are missing
                 }
+                // Check if parser file exists
+                if ( ! in_array( $parser_file, $available_parsers, true ) ) {
+                    add_settings_error('dsp_sites', 'dsp_invalid_parser_selection', sprintf(__('Invalid or non-existent parser file (`%s`) selected for source `%s`. Row skipped.', 'deal-scraper-plugin'), esc_html($parser_file.'.php'), esc_html($name)), 'warning');
+                    continue; // Skip this row if parser doesn't exist
+                }
+                 // If valid, add it, preserving status/time from old options if possible
+                 $existing_site_data = $current_sites_map[$index] ?? null;
+                 $sanitized_site = [ 'name' => $name, 'url' => $url, 'parser_file' => $parser_file, 'enabled' => $enabled, 'last_status' => isset($existing_site_data['last_status']) ? $existing_site_data['last_status'] : '', 'last_run_time' => isset($existing_site_data['last_run_time']) ? (int)$existing_site_data['last_run_time'] : 0, ];
+                 $sanitized_sites[] = $sanitized_site; // Add the sanitized site
             }
-        } else { $sanitized_sites = []; }
-        $output['sites'] = $sanitized_sites;
+        } else {
+             $sanitized_sites = []; // Input wasn't an array
+        }
+        // Check if the final sanitized list differs from the old one
+        if (wp_json_encode($sanitized_sites) !== wp_json_encode($old_options['sites'] ?? [])) {
+             $sources_changed = true;
+        }
+        $output['sites'] = $sanitized_sites; // Update output
     } elseif (!$import_processed && !isset($input['sites'])) {
-        // If NO import happened AND sites were not submitted, keep the existing sites
-        $output['sites'] = $old_options['sites'] ?? [];
+        // If NO import happened AND sites were not submitted via POST (e.g., maybe deleted all?),
+        // update output to reflect this (empty array). Check if it differs from old.
+        if (!empty($old_options['sites'])) {
+             $sources_changed = true;
+        }
+        $output['sites'] = [];
     }
 
 
@@ -218,6 +242,14 @@ function dsp_sanitize_settings( $input ) {
     $output['purge_enabled'] = ( isset( $input['purge_enabled'] ) && $input['purge_enabled'] == '1' ); $current_purge_age = $output['purge_max_age_days'] ?? $defaults['purge_max_age_days']; if ( isset( $input['purge_max_age_days'] ) ) { $age = intval( $input['purge_max_age_days'] ); $output['purge_max_age_days'] = ( $age >= 1 ) ? $age : $defaults['purge_max_age_days']; } else { $output['purge_max_age_days'] = $current_purge_age; }
     $old_frequency = $old_options['fetch_frequency'] ?? $defaults['fetch_frequency']; $new_frequency = $defaults['fetch_frequency']; $allowed_fetch_frequencies = ['twicedaily', 'daily']; if ( isset( $input['fetch_frequency'] ) && in_array( $input['fetch_frequency'], $allowed_fetch_frequencies, true ) ) { $new_frequency = $input['fetch_frequency']; } else { if (in_array($old_frequency, $allowed_fetch_frequencies, true)) { $new_frequency = $old_frequency; if (isset($input['fetch_frequency'])) { add_settings_error('dsp_fetch_frequency', 'dsp_invalid_frequency', __('Invalid fetch frequency selected. Setting unchanged.', 'deal-scraper-plugin'), 'error'); } } else { $new_frequency = $defaults['fetch_frequency']; if (isset($input['fetch_frequency'])) { add_settings_error('dsp_fetch_frequency', 'dsp_invalid_frequency', __('Invalid fetch frequency selected. Reverted to default.', 'deal-scraper-plugin'), 'error'); } } } $output['fetch_frequency'] = $new_frequency;
     if ($new_frequency !== $old_frequency) { $timestamp = wp_next_scheduled( DSP_CRON_HOOK ); wp_clear_scheduled_hook( DSP_CRON_HOOK ); $next_run = $timestamp ? $timestamp : (time() + 60); wp_schedule_event( $next_run, $new_frequency, DSP_CRON_HOOK ); if ( ! wp_next_scheduled( DSP_CRON_HOOK ) ) { error_log("DSP Settings Save Error: Failed to reschedule fetch cron ({DSP_CRON_HOOK}) after clearing."); add_settings_error( 'dsp_fetch_frequency', 'dsp_cron_reschedule_fail', __('Error rescheduling the deal check cron job.', 'deal-scraper-plugin'), 'error' ); } else { error_log("DSP Settings Save: Rescheduled fetch cron ({DSP_CRON_HOOK}) to run '{$new_frequency}'."); $schedules = wp_get_schedules(); $display_name = isset($schedules[$new_frequency]['display']) ? $schedules[$new_frequency]['display'] : $new_frequency; add_settings_error( 'dsp_fetch_frequency', 'dsp_cron_rescheduled', sprintf(__('Fetch schedule updated to: %s', 'deal-scraper-plugin'), esc_html($display_name)), 'updated' ); } }
+
+
+    // --- *** NEW: Clear transient cache if sources changed *** ---
+    if ($sources_changed) {
+         delete_transient( DSP_SOURCE_LIST_TRANSIENT );
+         error_log("DSP Settings Save: Sources list changed, cleared transient '" . DSP_SOURCE_LIST_TRANSIENT . "'.");
+    }
+    // --- *** END Cache Clear *** ---
 
 
     // Final Merge with defaults and Filter keys
