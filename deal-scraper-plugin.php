@@ -22,7 +22,7 @@ define( 'DSP_CRON_HOOK', 'dsp_periodic_deal_fetch' );
 define( 'DSP_OPTION_NAME', 'dsp_settings' );
 define( 'DSP_EMAIL_CRON_HOOK', 'dsp_daily_email_check' );
 define( 'DSP_LAST_EMAIL_OPTION', 'dsp_last_email_send_time' );
-define( 'DSP_ITEMS_PER_PAGE', 25 );
+define( 'DSP_ITEMS_PER_PAGE', 24 );
 define( 'DSP_VERSION', '1.1.36' ); // *** UPDATED VERSION ***
 define( 'DSP_DB_VERSION_OPTION', 'dsp_db_version' );
 define( 'DSP_SOURCE_LIST_TRANSIENT', 'dsp_enabled_sources_list' );

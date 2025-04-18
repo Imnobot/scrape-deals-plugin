@@ -1102,3 +1102,35 @@ html.dsp-theme-dark .dsp-table-wrapper.dsp-table-loading::before {
 }
 /* Keep the spinner animation */
 @keyframes dsp-spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+.dsp-loader-container {
+    text-align: center;
+    padding: 20px 0;
+    width: 100%;
+    clear: both; /* Important if using floats for grid */
+}
+.dsp-loader-container .dsp-spinner {
+    display: inline-block;
+    vertical-align: middle;
+    /* Make sure your .dsp-spinner styles are defined (width, height, border, animation) */
+    /* Example spinner (adapt as needed): */
+    width: 24px;
+    height: 24px;
+    border: 3px solid rgba(0, 0, 0, 0.1);
+    border-left-color: #0073aa; /* Example color */
+    border-radius: 50%;
+    animation: dsp-spin 1s linear infinite;
+    margin-right: 10px;
+}
+.dsp-loader-container span {
+    vertical-align: middle;
+    color: #555;
+}
+/* Ensure your animation is defined */
+@keyframes dsp-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Hide standard pagination if it exists */
+#dsp-pagination-controls {
+    display: none !important;
+}

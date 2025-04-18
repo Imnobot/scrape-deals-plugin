@@ -1,5 +1,5 @@
 <?php
-// File: includes/shortcode-handler.php (v1.1.35 - Use Local Image Source in PHP Render)
+// File: includes/shortcode-handler.php (v1.1.36 - Infinite Scroll Prep)
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
@@ -34,6 +34,8 @@ function dsp_render_shortcode( $atts ) {
     $can_see_debug_button = ($show_debug_button_setting && current_user_can( 'manage_options' ));
 
     // --- Fetch Initial Data (Page 1, default sort) ---
+    // Note: This initial fetch is still useful even with infinite scroll
+    // as it provides the first batch of deals immediately without JS.
     $items_per_page = defined('DSP_ITEMS_PER_PAGE') ? DSP_ITEMS_PER_PAGE : 25;
     $initial_db_data = DSP_DB_Handler::get_deals([
         'orderby' => 'first_seen', 'order' => 'DESC',
@@ -46,7 +48,6 @@ function dsp_render_shortcode( $atts ) {
         : __('Never', 'deal-scraper-plugin');
 
     // --- Process deals for immediate display ---
-    // This function now adds 'local_image_src' based on 'image_attachment_id'
     $processed_deals_page_1 = [];
     if ($deals_page_1) {
         $processed_deals_page_1 = dsp_process_deals_for_ajax($deals_page_1, $last_fetch_time);
@@ -57,7 +58,7 @@ function dsp_render_shortcode( $atts ) {
     // Add view mode class to main container
     ?>
     <div id="dsp-deal-display-container" class="dsp-container dsp-view-<?php echo esc_attr($view_mode); ?>">
-        <?php // Filters Block (Same as before) ?>
+        <?php // Filters Block ?>
         <div class="dsp-filters">
              <div class="dsp-filter-item">
                  <label for="dsp-search-input"><?php esc_html_e('Search:', 'deal-scraper-plugin'); ?></label>
@@ -86,7 +87,7 @@ function dsp_render_shortcode( $atts ) {
              <?php endif; ?>
          </div>
 
-        <?php // Controls Block (Same as before) ?>
+        <?php // Controls Block ?>
         <div class="dsp-debug-controls">
             <?php if ( $can_see_debug_button ) : ?>
                 <button id="dsp-toggle-debug-log" class="dsp-button dsp-button-secondary"><?php esc_html_e('Show Debug Log', 'deal-scraper-plugin'); ?></button>
@@ -97,7 +98,7 @@ function dsp_render_shortcode( $atts ) {
             <?php endif; ?>
         </div>
 
-        <?php // Debug Log Container (Same as before) ?>
+        <?php // Debug Log Container ?>
         <?php if ( $can_see_debug_button ) : ?>
             <div id="dsp-debug-log-container" style="display: none;">
                 <h4><?php esc_html_e('Refresh Debug Log:', 'deal-scraper-plugin'); ?></h4>
@@ -105,19 +106,19 @@ function dsp_render_shortcode( $atts ) {
             </div>
         <?php endif; ?>
 
-        <?php // Background Update Notice Placeholder (Same as before) ?>
+        <?php // Background Update Notice Placeholder ?>
         <div id="dsp-background-update-notice" class="dsp-update-notice" style="display: none;" aria-live="polite"></div>
 
-        <?php // Status Bar (Same as before) ?>
+        <?php // Status Bar ?>
         <div class="dsp-status-bar">
              <span id="dsp-status-message"><?php esc_html_e('Loading deal info...', 'deal-scraper-plugin'); ?></span>
              <span id="dsp-last-updated" style="float: right; visibility: <?php echo $last_fetch_time ? 'visible' : 'hidden'; ?>;"><?php echo esc_html__('Last successful check:', 'deal-scraper-plugin'); ?> <span id="dsp-last-updated-time"><?php echo esc_html($last_fetch_display); ?></span></span>
         </div>
 
-        <?php // *** NEW: Main content area (switches between table and grid) *** ?>
+        <?php // Main content area ?>
         <div id="dsp-deals-content" class="dsp-deals-content-area">
             <?php if ($view_mode === 'table'): ?>
-                <div class="dsp-table-wrapper"> <?php // Keep wrapper for table view ?>
+                <div class="dsp-table-wrapper">
                     <table id="dsp-deals-table" class="dsp-table">
                         <thead>
                             <tr>
@@ -132,12 +133,12 @@ function dsp_render_shortcode( $atts ) {
                             <?php // Initial rows rendered by PHP for table view ?>
                             <?php if ( ! empty( $processed_deals_page_1 ) ) : ?>
                                 <?php foreach ( $processed_deals_page_1 as $index => $deal ) : ?>
-                                    <?php // Row generation logic (same as before, no image changes needed here)
+                                    <?php // Row generation logic
                                         $row_classes = ['dsp-deal-row']; if ($deal->is_new) $row_classes[] = 'dsp-new-item'; if ($deal->is_lifetime) $row_classes[] = 'dsp-lifetime-item'; $row_classes[] = ($index % 2 === 0) ? 'dsp-even-row' : 'dsp-odd-row';
                                         $sortable_price = 'Infinity'; if(isset($deal->price_numeric) && is_numeric($deal->price_numeric)) $sortable_price = (float)$deal->price_numeric; elseif (isset($deal->price) && strpos(strtolower(trim(strval($deal->price))), 'free') !== false) $sortable_price = 0;
                                         $first_seen_timestamp = $deal->first_seen_ts ?? 0;
-                                        $attachment_id = $deal->image_attachment_id ?? 0; // Get attachment ID
-                                        $local_image_src = $deal->local_image_src ?? ''; // Get pre-processed local URL
+                                        $attachment_id = $deal->image_attachment_id ?? 0;
+                                        $local_image_src = $deal->local_image_src ?? '';
                                     ?>
                                     <tr class="<?php echo esc_attr( implode(' ', $row_classes) ); ?>"
                                         data-source="<?php echo esc_attr( $deal->source ?? '' ); ?>" data-title="<?php echo esc_attr( $deal->title ?? '' ); ?>" data-description="<?php echo esc_attr( $deal->description ?? '' ); ?>" data-is-new="<?php echo esc_attr( $deal->is_new ? '1' : '0' ); ?>" data-is-ltd="<?php echo esc_attr( $deal->is_lifetime ? '1' : '0' ); ?>" data-first-seen="<?php echo esc_attr( $first_seen_timestamp ); ?>" data-price="<?php echo esc_attr( $sortable_price ); ?>" data-link="<?php echo esc_url( $deal->link ?? '#' ); ?>"
@@ -162,33 +163,27 @@ function dsp_render_shortcode( $atts ) {
                     <?php // Initial items rendered by PHP for grid view ?>
                     <?php if ( ! empty( $processed_deals_page_1 ) ) : ?>
                         <?php foreach ( $processed_deals_page_1 as $index => $deal ) : ?>
-                            <?php
+                            <?php // Grid item generation logic
                                 $grid_classes = ['dsp-grid-item']; if ($deal->is_new) $grid_classes[] = 'dsp-new-item'; if ($deal->is_lifetime) $grid_classes[] = 'dsp-lifetime-item';
                                 $first_seen_timestamp = $deal->first_seen_ts ?? 0;
                                 $sortable_price = 'Infinity'; if(isset($deal->price_numeric) && is_numeric($deal->price_numeric)) $sortable_price = (float)$deal->price_numeric; elseif (isset($deal->price) && strpos(strtolower(trim(strval($deal->price))), 'free') !== false) $sortable_price = 0;
-
-                                // *** NEW: Image Logic for PHP Rendering ***
                                 $attachment_id = $deal->image_attachment_id ?? 0;
-                                $local_image_src = $deal->local_image_src ?? ''; // Get pre-processed local URL
+                                $local_image_src = $deal->local_image_src ?? '';
                                 $external_image_url = $deal->image_url ?? '';
-                                $display_image_url = $local_image_src ?: $external_image_url; // Prioritize local URL
-                                // *** END NEW IMAGE LOGIC ***
+                                $display_image_url = $local_image_src ?: $external_image_url;
                             ?>
                             <div class="<?php echo esc_attr( implode(' ', $grid_classes) ); ?>"
                                  data-source="<?php echo esc_attr( $deal->source ?? '' ); ?>" data-title="<?php echo esc_attr( $deal->title ?? '' ); ?>" data-description="<?php echo esc_attr( $deal->description ?? '' ); ?>" data-is-new="<?php echo esc_attr( $deal->is_new ? '1' : '0' ); ?>" data-is-ltd="<?php echo esc_attr( $deal->is_lifetime ? '1' : '0' ); ?>" data-first-seen="<?php echo esc_attr( $first_seen_timestamp ); ?>" data-price="<?php echo esc_attr( $sortable_price ); ?>" data-link="<?php echo esc_url( $deal->link ?? '#' ); ?>"
                                  data-image-url="<?php echo esc_url($external_image_url); ?>"
                                  data-local-image-src="<?php echo esc_url($local_image_src); ?>"
                                  data-attachment-id="<?php echo esc_attr($attachment_id); ?>">
-
                                 <div class="dsp-grid-item-image">
                                     <a href="<?php echo esc_url( $deal->link ?? '#' ); ?>" target="_blank" rel="noopener noreferrer">
-                                        <?php // *** UPDATED: Use $display_image_url *** ?>
                                         <?php if ($display_image_url): ?>
                                             <img src="<?php echo esc_url($display_image_url); ?>" alt="<?php echo esc_attr($deal->title ?? ''); ?>" loading="lazy">
                                         <?php else: ?>
                                             <span class="dsp-image-placeholder"></span> <?php // Placeholder ?>
                                         <?php endif; ?>
-                                         <?php // *** END UPDATE *** ?>
                                     </a>
                                 </div>
                                 <div class="dsp-grid-item-content">
@@ -203,7 +198,7 @@ function dsp_render_shortcode( $atts ) {
                                         <?php if ($deal->is_new): ?><span class="dsp-grid-item-new"><?php esc_html_e('(New)', 'deal-scraper-plugin'); ?></span><?php endif; ?>
                                     </div>
                                     <?php if ( ! empty( $deal->description ) ) : ?>
-                                        <p class="dsp-grid-item-description"><?php echo esc_html( wp_trim_words( $deal->description, 20, '...' ) ); // Trim description ?></p>
+                                        <p class="dsp-grid-item-description"><?php echo esc_html( wp_trim_words( $deal->description, 20, '...' ) ); ?></p>
                                     <?php endif; ?>
                                 </div>
                             </div>
@@ -213,13 +208,22 @@ function dsp_render_shortcode( $atts ) {
                     <?php endif; ?>
                 </div> <?php // End Grid Container ?>
             <?php endif; // End view_mode check ?>
+
+            <?php // *** NEW: Infinite Scroll Loader Placeholder *** ?>
+            <div id="dsp-infinite-scroll-loader" class="dsp-loader-container" style="display: none;">
+                <div class="dsp-spinner"></div> <?php // Spinner should be styled via CSS ?>
+                <span><?php esc_html_e('Loading more deals...', 'deal-scraper-plugin'); ?></span>
+            </div>
+             <?php // *** END Infinite Scroll Loader Placeholder *** ?>
+
         </div> <?php // End dsp-deals-content-area ?>
 
 
-        <?php // Pagination Placeholder (Same as before) ?>
-        <div id="dsp-pagination-controls" class="dsp-pagination"></div>
+        <?php // --- REMOVED PAGINATION CONTROLS ---
+              // <div id="dsp-pagination-controls" class="dsp-pagination"></div>
+        ?>
 
-        <?php // Modals (Same as before) ?>
+        <?php // Modals (Donate, Subscribe) - No change needed here ?>
         <div id="dsp-donate-modal" class="dsp-modal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="dsp-donate-title">
             <div class="dsp-modal-content"> <button class="dsp-modal-close" aria-label="<?php esc_attr_e('Close donation dialog', 'deal-scraper-plugin'); ?>">×</button> <h2 id="dsp-donate-title"><?php esc_html_e('Support This Plugin', 'deal-scraper-plugin'); ?></h2> <p><?php esc_html_e('If you find this plugin useful, please consider supporting its development via crypto.', 'deal-scraper-plugin'); ?></p> <div class="dsp-donate-images"> <div class="dsp-donate-item"> <p><strong><?php esc_html_e('USDT (ERC20)', 'deal-scraper-plugin'); ?></strong></p> <img src="<?php echo esc_url(DSP_PLUGIN_URL . DSP_DONATE_USDT_QR_IMG); ?>" alt="<?php esc_attr_e('USDT ERC20 QR Code', 'deal-scraper-plugin'); ?>"> <code class="dsp-copy-code" title="<?php esc_attr_e('Click to copy address', 'deal-scraper-plugin'); ?>"><?php echo esc_html(DSP_DONATE_USDT_ADDR); ?></code> </div> <div class="dsp-donate-item"> <p><strong><?php esc_html_e('BNB (BEP2 / Native)', 'deal-scraper-plugin'); ?></strong></p> <img src="<?php echo esc_url(DSP_PLUGIN_URL . DSP_DONATE_BNB_QR_IMG); ?>" alt="<?php esc_attr_e('BNB QR Code', 'deal-scraper-plugin'); ?>"> <code class="dsp-copy-code" title="<?php esc_attr_e('Click to copy address', 'deal-scraper-plugin'); ?>"><?php echo esc_html(DSP_DONATE_BNB_ADDR); ?></code> </div> <div class="dsp-donate-item"> <p><strong><?php esc_html_e('Bitcoin (BTC)', 'deal-scraper-plugin'); ?></strong></p> <img src="<?php echo esc_url(DSP_PLUGIN_URL . DSP_DONATE_BTC_QR_IMG); ?>" alt="<?php esc_attr_e('Bitcoin QR Code', 'deal-scraper-plugin'); ?>"> <code class="dsp-copy-code" title="<?php esc_attr_e('Click to copy address', 'deal-scraper-plugin'); ?>"><?php echo esc_html(DSP_DONATE_BTC_ADDR); ?></code> </div> </div> <p class="dsp-copy-feedback" aria-live="polite"></p> <p class="dsp-thank-you"><?php esc_html_e('Thank you for your support!', 'deal-scraper-plugin'); ?></p> </div>
         </div>
@@ -233,6 +237,7 @@ function dsp_render_shortcode( $atts ) {
 }
 
 // --- Helper Function Availability Checks ---
+// These remain the same
 if (!function_exists('dsp_get_default_config')) { error_log("DSP Shortcode Error: dsp_get_default_config function not found!"); function dsp_get_default_config() { return []; } }
 if (!function_exists('dsp_process_deals_for_ajax')) { error_log("DSP Shortcode Error: dsp_process_deals_for_ajax function not found!"); function dsp_process_deals_for_ajax($deals, $ts) { return $deals; } }
 if (!function_exists('dsp_get_last_successful_run_timestamp')) { error_log("DSP Shortcode Error: dsp_get_last_successful_run_timestamp function not found!"); function dsp_get_last_successful_run_timestamp() { return get_option('dsp_last_fetch_time', 0); } }
