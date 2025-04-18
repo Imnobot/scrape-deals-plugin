@@ -1,5 +1,5 @@
 <?php
-// File: includes/shortcode-handler.php (v1.1.33 - Add Grid View structure)
+// File: includes/shortcode-handler.php (v1.1.35 - Use Local Image Source in PHP Render)
 
 if ( ! defined( 'ABSPATH' ) ) exit;
 
@@ -46,6 +46,7 @@ function dsp_render_shortcode( $atts ) {
         : __('Never', 'deal-scraper-plugin');
 
     // --- Process deals for immediate display ---
+    // This function now adds 'local_image_src' based on 'image_attachment_id'
     $processed_deals_page_1 = [];
     if ($deals_page_1) {
         $processed_deals_page_1 = dsp_process_deals_for_ajax($deals_page_1, $last_fetch_time);
@@ -131,13 +132,18 @@ function dsp_render_shortcode( $atts ) {
                             <?php // Initial rows rendered by PHP for table view ?>
                             <?php if ( ! empty( $processed_deals_page_1 ) ) : ?>
                                 <?php foreach ( $processed_deals_page_1 as $index => $deal ) : ?>
-                                    <?php // Row generation logic (same as before)
+                                    <?php // Row generation logic (same as before, no image changes needed here)
                                         $row_classes = ['dsp-deal-row']; if ($deal->is_new) $row_classes[] = 'dsp-new-item'; if ($deal->is_lifetime) $row_classes[] = 'dsp-lifetime-item'; $row_classes[] = ($index % 2 === 0) ? 'dsp-even-row' : 'dsp-odd-row';
                                         $sortable_price = 'Infinity'; if(isset($deal->price_numeric) && is_numeric($deal->price_numeric)) $sortable_price = (float)$deal->price_numeric; elseif (isset($deal->price) && strpos(strtolower(trim(strval($deal->price))), 'free') !== false) $sortable_price = 0;
                                         $first_seen_timestamp = $deal->first_seen_ts ?? 0;
+                                        $attachment_id = $deal->image_attachment_id ?? 0; // Get attachment ID
+                                        $local_image_src = $deal->local_image_src ?? ''; // Get pre-processed local URL
                                     ?>
                                     <tr class="<?php echo esc_attr( implode(' ', $row_classes) ); ?>"
-                                        data-source="<?php echo esc_attr( $deal->source ?? '' ); ?>" data-title="<?php echo esc_attr( $deal->title ?? '' ); ?>" data-description="<?php echo esc_attr( $deal->description ?? '' ); ?>" data-is-new="<?php echo esc_attr( $deal->is_new ? '1' : '0' ); ?>" data-is-ltd="<?php echo esc_attr( $deal->is_lifetime ? '1' : '0' ); ?>" data-first-seen="<?php echo esc_attr( $first_seen_timestamp ); ?>" data-price="<?php echo esc_attr( $sortable_price ); ?>" data-link="<?php echo esc_url( $deal->link ?? '#' ); ?>" data-image-url="<?php echo esc_url($deal->image_url ?? ''); // Add image URL data attr ?>">
+                                        data-source="<?php echo esc_attr( $deal->source ?? '' ); ?>" data-title="<?php echo esc_attr( $deal->title ?? '' ); ?>" data-description="<?php echo esc_attr( $deal->description ?? '' ); ?>" data-is-new="<?php echo esc_attr( $deal->is_new ? '1' : '0' ); ?>" data-is-ltd="<?php echo esc_attr( $deal->is_lifetime ? '1' : '0' ); ?>" data-first-seen="<?php echo esc_attr( $first_seen_timestamp ); ?>" data-price="<?php echo esc_attr( $sortable_price ); ?>" data-link="<?php echo esc_url( $deal->link ?? '#' ); ?>"
+                                        data-image-url="<?php echo esc_url($deal->image_url ?? ''); ?>"
+                                        data-local-image-src="<?php echo esc_url($local_image_src); ?>"
+                                        data-attachment-id="<?php echo esc_attr($attachment_id); ?>">
                                         <td class="dsp-cell-new"><?php echo $deal->is_new ? esc_html__('Yes', 'deal-scraper-plugin') : esc_html__('No', 'deal-scraper-plugin'); ?></td>
                                         <td class="dsp-cell-title"><a href="<?php echo esc_url( $deal->link ?? '#' ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( $deal->title ?? 'N/A' ); ?></a><?php if ($deal->is_lifetime): ?><span class="dsp-lifetime-badge" title="<?php esc_attr_e('Lifetime Deal', 'deal-scraper-plugin'); ?>">LTD</span><?php endif; ?><?php if ( ! empty( $deal->description ) ) : ?><p class="dsp-description"><?php echo esc_html( $deal->description ); ?></p><?php endif; ?></td>
                                         <td class="dsp-cell-price"><?php echo esc_html( $deal->price ?? 'N/A' ); ?></td>
@@ -156,22 +162,33 @@ function dsp_render_shortcode( $atts ) {
                     <?php // Initial items rendered by PHP for grid view ?>
                     <?php if ( ! empty( $processed_deals_page_1 ) ) : ?>
                         <?php foreach ( $processed_deals_page_1 as $index => $deal ) : ?>
-                            <?php // Grid item generation logic (placeholder structure)
+                            <?php
                                 $grid_classes = ['dsp-grid-item']; if ($deal->is_new) $grid_classes[] = 'dsp-new-item'; if ($deal->is_lifetime) $grid_classes[] = 'dsp-lifetime-item';
                                 $first_seen_timestamp = $deal->first_seen_ts ?? 0;
                                 $sortable_price = 'Infinity'; if(isset($deal->price_numeric) && is_numeric($deal->price_numeric)) $sortable_price = (float)$deal->price_numeric; elseif (isset($deal->price) && strpos(strtolower(trim(strval($deal->price))), 'free') !== false) $sortable_price = 0;
-                                $image_url = $deal->image_url ?? ''; // Get image URL if available
+
+                                // *** NEW: Image Logic for PHP Rendering ***
+                                $attachment_id = $deal->image_attachment_id ?? 0;
+                                $local_image_src = $deal->local_image_src ?? ''; // Get pre-processed local URL
+                                $external_image_url = $deal->image_url ?? '';
+                                $display_image_url = $local_image_src ?: $external_image_url; // Prioritize local URL
+                                // *** END NEW IMAGE LOGIC ***
                             ?>
                             <div class="<?php echo esc_attr( implode(' ', $grid_classes) ); ?>"
-                                 data-source="<?php echo esc_attr( $deal->source ?? '' ); ?>" data-title="<?php echo esc_attr( $deal->title ?? '' ); ?>" data-description="<?php echo esc_attr( $deal->description ?? '' ); ?>" data-is-new="<?php echo esc_attr( $deal->is_new ? '1' : '0' ); ?>" data-is-ltd="<?php echo esc_attr( $deal->is_lifetime ? '1' : '0' ); ?>" data-first-seen="<?php echo esc_attr( $first_seen_timestamp ); ?>" data-price="<?php echo esc_attr( $sortable_price ); ?>" data-link="<?php echo esc_url( $deal->link ?? '#' ); ?>" data-image-url="<?php echo esc_url($image_url); ?>">
+                                 data-source="<?php echo esc_attr( $deal->source ?? '' ); ?>" data-title="<?php echo esc_attr( $deal->title ?? '' ); ?>" data-description="<?php echo esc_attr( $deal->description ?? '' ); ?>" data-is-new="<?php echo esc_attr( $deal->is_new ? '1' : '0' ); ?>" data-is-ltd="<?php echo esc_attr( $deal->is_lifetime ? '1' : '0' ); ?>" data-first-seen="<?php echo esc_attr( $first_seen_timestamp ); ?>" data-price="<?php echo esc_attr( $sortable_price ); ?>" data-link="<?php echo esc_url( $deal->link ?? '#' ); ?>"
+                                 data-image-url="<?php echo esc_url($external_image_url); ?>"
+                                 data-local-image-src="<?php echo esc_url($local_image_src); ?>"
+                                 data-attachment-id="<?php echo esc_attr($attachment_id); ?>">
 
                                 <div class="dsp-grid-item-image">
                                     <a href="<?php echo esc_url( $deal->link ?? '#' ); ?>" target="_blank" rel="noopener noreferrer">
-                                        <?php if ($image_url): ?>
-                                            <img src="<?php echo esc_url($image_url); ?>" alt="<?php echo esc_attr($deal->title ?? ''); ?>" loading="lazy">
+                                        <?php // *** UPDATED: Use $display_image_url *** ?>
+                                        <?php if ($display_image_url): ?>
+                                            <img src="<?php echo esc_url($display_image_url); ?>" alt="<?php echo esc_attr($deal->title ?? ''); ?>" loading="lazy">
                                         <?php else: ?>
                                             <span class="dsp-image-placeholder"></span> <?php // Placeholder ?>
                                         <?php endif; ?>
+                                         <?php // *** END UPDATE *** ?>
                                     </a>
                                 </div>
                                 <div class="dsp-grid-item-content">
@@ -197,7 +214,6 @@ function dsp_render_shortcode( $atts ) {
                 </div> <?php // End Grid Container ?>
             <?php endif; // End view_mode check ?>
         </div> <?php // End dsp-deals-content-area ?>
-        <?php // *** END CONTENT AREA *** ?>
 
 
         <?php // Pagination Placeholder (Same as before) ?>

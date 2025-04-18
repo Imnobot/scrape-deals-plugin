@@ -1,3 +1,5 @@
+/* File: assets/css/deal-display.css (v1.1.35 - Style Grid Title/Price) */
+
 /* Basic Styling for the Deal Scraper Display */
 
 .dsp-container {
@@ -132,7 +134,7 @@
 .dsp-button:disabled + .dsp-spinner {
     visibility: visible;
 }
-/* *** ADD Spinner for table loading state *** */
+/* Spinner for table loading state */
 .dsp-table-wrapper.dsp-table-loading::after {
     content: '';
     position: absolute;
@@ -330,13 +332,13 @@
 .dsp-new-item {
     background-color: #fff9e6 !important; /* Light yellow, important to override even/odd */
 }
-.dsp-new-item td {
+.dsp-table .dsp-new-item td { /* Table specific */
     font-weight: 600; /* Make text bolder for new items */
 }
 
-.dsp-lifetime-item td:nth-child(2) a, /* Style title link for lifetime */
-.dsp-lifetime-item td:nth-child(3) { /* Style price cell for lifetime */
-    color: #006400; /* Darker Green */
+.dsp-table .dsp-lifetime-item td:nth-child(2) a, /* Style title link for lifetime */
+.dsp-table .dsp-lifetime-item td:nth-child(3) { /* Style price cell for lifetime */
+    color: #006400 !important; /* Darker Green - use !important if needed */
     font-weight: 600;
 }
 .dsp-lifetime-badge {
@@ -523,12 +525,15 @@ html.dsp-theme-dark .dsp-description { color: #b4b9be; }
 html.dsp-theme-dark .dsp-new-item {
     background-color: #4a4a2a !important; /* Dark Yellowish background */
 }
-html.dsp-theme-dark .dsp-new-item td {
+html.dsp-theme-dark .dsp-table .dsp-new-item td {
     font-weight: 600;
     color: #f5f5d1 !important; /* Ensure bright text on dark yellow bg */
 }
-html.dsp-theme-dark .dsp-lifetime-item td:nth-child(2) a,
-html.dsp-theme-dark .dsp-lifetime-item td:nth-child(3) { color: #77dd77 !important; font-weight: 600; }
+html.dsp-theme-dark .dsp-table .dsp-lifetime-item td:nth-child(2) a,
+html.dsp-theme-dark .dsp-table .dsp-lifetime-item td:nth-child(3) {
+    color: #77dd77 !important;
+    font-weight: 600;
+}
 html.dsp-theme-dark .dsp-lifetime-badge { color: #1f5c1f; background-color: #a1e9a1; } /* Adjust badge for dark */
 
 /* Loading/Error Dark */
@@ -577,9 +582,9 @@ html.dsp-theme-dark .dsp-dismiss-notice:focus { background-color: rgba(255, 255,
     overflow-x: auto; /* Enable horizontal scrollbar only when needed */
     -webkit-overflow-scrolling: touch; /* Smoother scrolling momentum on iOS */
     margin-bottom: 1em; /* Add some space below the scrolling table */
-    position: relative; /* *** ADDED: Needed for overlay positioning *** */
+    position: relative; /* Needed for overlay positioning */
 }
-/* *** ADDED: Styles for loading overlay *** */
+/* Styles for loading overlay */
 .dsp-table-wrapper.dsp-table-loading > .dsp-table {
     opacity: 0.5; /* Fade out the table content */
     pointer-events: none; /* Prevent interaction with faded table */
@@ -943,12 +948,14 @@ html.dsp-theme-dark .dsp-table-wrapper.dsp-table-loading::before {
     margin: 0 0 8px 0;
     font-size: 1.1em;
     line-height: 1.3;
+    font-weight: 600; /* Make titles bolder by default in grid */
 }
 .dsp-grid-item-title a {
     text-decoration: none;
-    color: inherit;
+    color: #2271b1; /* Default: WP primary blue (like table links) */
 }
 .dsp-grid-item-title a:hover {
+    color: #1d6197; /* Darker blue on hover */
     text-decoration: underline;
 }
 .dsp-grid-item-meta {
@@ -974,13 +981,27 @@ html.dsp-theme-dark .dsp-table-wrapper.dsp-table-loading::before {
 /* Badges */
 .dsp-grid-item .dsp-lifetime-badge {
     font-size: 0.7em;
-    background-color: #5cb85c; /* Example color */
-    color: white;
+    background-color: #d1fcd1; /* Use same green as table */
+    color: #005a00;
     padding: 2px 5px;
     border-radius: 3px;
     vertical-align: middle;
     margin-left: 5px;
+    font-weight: bold;
 }
+
+/* *** NEW: Specific Grid Item Lifetime Styling *** */
+.dsp-grid-item.dsp-lifetime-item .dsp-grid-item-title a {
+    color: #006400; /* Darker Green */
+}
+.dsp-grid-item.dsp-lifetime-item .dsp-grid-item-title a:hover {
+    color: #004d00; /* Slightly darker green on hover */
+}
+.dsp-grid-item.dsp-lifetime-item .dsp-grid-item-price {
+     color: #006400; /* Darker Green */
+     font-weight: 600;
+}
+/* *** END NEW *** */
 
 /* Loading/Error messages for Grid View */
 .dsp-grid .dsp-loading-message,
@@ -1002,8 +1023,24 @@ html.dsp-theme-dark .dsp-table-wrapper.dsp-table-loading::before {
      color: #ccc; /* Lighter text */
 }
 .dsp-theme-dark .dsp-grid-item-title a {
-    color: #eee; /* Brighter title link */
+    color: #6dbff2; /* Default: Dark mode blue */
 }
+.dsp-theme-dark .dsp-grid-item-title a:hover {
+    color: #8ecbf4; /* Lighter blue */
+}
+/* *** NEW: Dark Mode Lifetime Grid Styling *** */
+.dsp-theme-dark .dsp-grid-item.dsp-lifetime-item .dsp-grid-item-title a {
+     color: #77dd77; /* Light green */
+}
+.dsp-theme-dark .dsp-grid-item.dsp-lifetime-item .dsp-grid-item-title a:hover {
+     color: #91e791; /* Lighter green on hover */
+}
+.dsp-theme-dark .dsp-grid-item.dsp-lifetime-item .dsp-grid-item-price {
+     color: #77dd77; /* Light green */
+}
+/* Badge color adjusted previously, should be okay */
+/* *** END NEW *** */
+
 .dsp-theme-dark .dsp-grid-item-meta {
     color: #aaa;
 }

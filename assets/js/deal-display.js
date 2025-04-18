@@ -1,18 +1,16 @@
-// File: assets/js/deal-display.js (v1.1.33 - Add Grid View structure)
+// File: assets/js/deal-display.js (v1.1.35 - Fix Pagination Init)
 
 jQuery(document).ready(function($) {
     const container = $('#dsp-deal-display-container');
     if (!container.length) return;
 
     // --- Selectors ---
-    // *** NEW: Selectors for different content areas ***
-    const contentArea = container.find('#dsp-deals-content'); // Main content area
-    const tableWrapper = contentArea.find('.dsp-table-wrapper'); // Table wrapper (if view=table)
-    const table = tableWrapper.find('#dsp-deals-table'); // Table element
-    const tableHead = table.find('thead'); // Table head
-    const tableBody = table.find('tbody'); // Table body
-    const gridContainer = contentArea.find('#dsp-deals-grid'); // Grid container (if view=grid)
-    // *** END NEW SELECTORS ***
+    const contentArea = container.find('#dsp-deals-content');
+    const tableWrapper = contentArea.find('.dsp-table-wrapper');
+    const table = tableWrapper.find('#dsp-deals-table');
+    const tableHead = table.find('thead');
+    const tableBody = table.find('tbody');
+    const gridContainer = contentArea.find('#dsp-deals-grid');
 
     const searchInput = container.find('#dsp-search-input');
     const newOnlyCheckbox = container.find('#dsp-new-only-checkbox');
@@ -49,26 +47,27 @@ jQuery(document).ready(function($) {
     let isSubscribing = false;
     let isLoadingPage = false;
     let currentPage = 1;
-    let totalItems = 0;
+    let totalItems = 0; // Initialize to 0, will be set by first fetch
     let itemsPerPage = 25;
     let initialLoadComplete = false;
     let applyFiltersDebounced;
-    const currentView = dsp_ajax_obj.view_mode || 'table'; // Get view mode from PHP ('table' or 'grid')
+    const currentView = dsp_ajax_obj.view_mode || 'table';
 
     // --- Initialization ---
     function init() {
         itemsPerPage = parseInt(dsp_ajax_obj.items_per_page, 10) || 25;
-        totalItems = parseInt(dsp_ajax_obj.total_items, 10) || 0;
+        // totalItems = parseInt(dsp_ajax_obj.total_items, 10) || 0; // Don't rely on localized total
         currentPage = 1;
         applyFiltersDebounced = debounce(applyFiltersAndSort, 400);
         createSourceCheckboxes();
-        parseInitialContent(); // *** UPDATED: Generic parsing function ***
-        renderPagination();
+        parseInitialContent(); // Parse initial HTML (may remove placeholders)
+        // renderPagination(); // *** REMOVED: Don't render pagination initially ***
         bindEvents();
-        updateStatusMessage();
+        // updateStatusMessage(); // Let fetchDealsPage update status on completion
         if(updateNoticeContainer.length) updateNoticeContainer.hide();
-        initialLoadComplete = true;
-        console.log(`DSP: Init complete. View Mode: ${currentView}`);
+        initialLoadComplete = true; // Mark basic init done
+        console.log(`DSP: Init complete. View Mode: ${currentView}. Fetching page 1...`);
+        fetchDealsPage(1); // *** ADDED: Fetch page 1 immediately ***
     }
 
     /** Creates source filter checkboxes */
@@ -86,71 +85,55 @@ jQuery(document).ready(function($) {
         }
     }
 
-    /** Parses the initial HTML (table or grid) to populate allDealsData */
+    /** Parses the initial HTML (table or grid) to potentially remove placeholders */
     function parseInitialContent() {
         console.log(`DSP: Parsing initial content (${currentView} view)...`);
-        allDealsData = []; // Reset
-        let itemsFound = 0;
-        let placeholderSelector = '.dsp-loading-row, .dsp-loading-message, .dsp-no-deals-row, .dsp-no-deals-message'; // Selectors for placeholders
+        // We don't need to populate allDealsData here anymore, fetchDealsPage will do it.
+        // We just need to potentially remove the initial loading/no deals message
+        // if the PHP happened to render actual deals (which it might not anymore).
+        let placeholderSelector = '.dsp-loading-row, .dsp-loading-message, .dsp-no-deals-row, .dsp-no-deals-message';
+        const containerToCheck = (currentView === 'table') ? tableBody : gridContainer;
+        const initialPlaceholder = containerToCheck.find(placeholderSelector);
+        const hasActualDeals = (currentView === 'table')
+            ? containerToCheck.find('tr.dsp-deal-row').length > 0
+            : containerToCheck.find('div.dsp-grid-item').length > 0;
 
-        if (currentView === 'table') {
-            tableBody.find('tr.dsp-deal-row').each(function() {
-                const deal = parseDealDataFromElement($(this)); // Use common parser
-                if (deal) {
-                    allDealsData.push(deal);
-                    itemsFound++;
-                }
-            });
-        } else { // grid view
-            gridContainer.find('div.dsp-grid-item').each(function() {
-                const deal = parseDealDataFromElement($(this)); // Use common parser
-                if (deal) {
-                    allDealsData.push(deal);
-                    itemsFound++;
-                }
-            });
-        }
-
-        // Handle removing initial loading/no deals message IF deals were actually parsed
-        const containerToClear = (currentView === 'table') ? tableBody : gridContainer;
-        const initialPlaceholder = containerToClear.find(placeholderSelector);
-        if (itemsFound > 0 && initialPlaceholder.length > 0) {
+        if (hasActualDeals && initialPlaceholder.length > 0) {
              initialPlaceholder.remove();
-             console.log("DSP: Removed initial loading/no deals placeholder as deals were parsed.");
-        } else if (itemsFound === 0) {
-             console.log("DSP: Keeping initial placeholder as no deals were parsed.");
+             console.log("DSP: Removed initial placeholder as initial deals were found in HTML.");
+        } else if (!hasActualDeals && initialPlaceholder.length === 0) {
+            // If no deals and no placeholder, add a loading message temporarily
+            const loadingMsgHTML = (currentView === 'table')
+                ? '<tr class="dsp-loading-row"><td colspan="5">' + __(dsp_ajax_obj.loading_text) + '</td></tr>'
+                : '<div class="dsp-loading-message">' + __(dsp_ajax_obj.loading_text) + '</div>';
+            containerToCheck.html(loadingMsgHTML);
+            console.log("DSP: Added temporary loading message as no deals or placeholder found.");
+        } else {
+             console.log("DSP: Initial placeholder status seems okay.");
         }
-
-        console.log(`DSP: Parsed ${allDealsData.length} initial deals from PHP.`);
     }
 
-    /** Parses data-* attributes from a jQuery element (row or grid item) */
+    /** Parses data-* attributes from a jQuery element (row or grid item) - Kept for potential future use */
     function parseDealDataFromElement($element) {
         if (!$element || $element.length === 0) return null;
-
         const firstSeenTimestamp = parseInt($element.data('first-seen'), 10) || 0;
         const deal = {
             link: $element.data('link') || '#',
             title: $element.data('title') || '',
-            // Get values based on view type, assuming data attrs are consistent
             price: (currentView === 'table') ? $element.find('.dsp-cell-price').text() : $element.find('.dsp-grid-item-price').text(),
             source: $element.data('source') || '',
             description: $element.data('description') || '',
             first_seen_ts: firstSeenTimestamp,
             first_seen_formatted: (currentView === 'table') ? $element.find('.dsp-cell-date').text().trim() : $element.find('.dsp-grid-item-date').text().trim(),
             is_new: $element.data('is-new') == '1',
-            is_lifetime: $element.data('is-ltd') == '1', // Consistent data attribute 'data-is-ltd'
+            is_lifetime: $element.data('is-ltd') == '1',
             price_numeric: $element.data('price') ?? Infinity,
-            image_url: $element.data('image-url') || '', // Get image url
+            image_url: $element.data('image-url') || '',
+            local_image_src: $element.data('local-image-src') || '',
+            image_attachment_id: parseInt($element.data('attachment-id'), 10) || 0
         };
-
-        // Basic validation
-        if (deal.link !== '#' && deal.title && deal.first_seen_ts > 0) {
-            return deal;
-        } else {
-            console.warn("DSP: Skipped parsing element due to missing data:", $element, deal);
-            return null;
-        }
+        if (deal.link !== '#' && deal.title && deal.first_seen_ts > 0) { return deal; }
+        else { console.warn("DSP: Skipped parsing element:", $element, deal); return null; }
     }
 
 
@@ -160,30 +143,37 @@ jQuery(document).ready(function($) {
 
         const allSourceCheckboxes = container.find('.dsp-source-filter-cb');
         const checkedSourceCheckboxes = container.find('.dsp-source-filter-cb:checked');
-        const contentWrapper = (currentView === 'table') ? tableWrapper : gridContainer; // Get the right container
+        const contentWrapper = (currentView === 'table') ? tableWrapper : gridContainer;
 
+        // Clear content and show loading before check (handles no sources case implicitly)
+        isLoadingPage = true;
+        currentPage = pageNum;
+        const loadingMsgHTML = (currentView === 'table')
+            ? '<tr class="dsp-loading-row"><td colspan="5">' + __(dsp_ajax_obj.loading_text) + '</td></tr>'
+            : '<div class="dsp-loading-message">' + __(dsp_ajax_obj.loading_text) + '</div>';
+        if (currentView === 'table') tableBody.empty().html(loadingMsgHTML);
+        else gridContainer.empty().html(loadingMsgHTML);
+
+        if(contentWrapper.length) contentWrapper.addClass('dsp-loading-overlay');
+        paginationControlsContainer.addClass('dsp-loading');
+        statusMessage.text(__(dsp_ajax_obj.loading_text));
+        if(updateNoticeContainer.length) updateNoticeContainer.slideUp(100);
+
+
+        // Check if sources are selected *after* showing loading
         if (allSourceCheckboxes.length > 0 && checkedSourceCheckboxes.length === 0) {
             console.log("DSP: No sources selected, skipping AJAX fetch.");
-            isLoadingPage = true;
-            if(contentWrapper.length) contentWrapper.removeClass('dsp-loading-overlay'); // Use generic overlay class
-            const noSourceMsg = '<div class="dsp-no-deals-message">' + __(dsp_ajax_obj.no_sources_selected_text) + '</div>'; // Grid message
-            const noSourceRow = '<tr class="dsp-no-deals-row"><td colspan="5">' + __(dsp_ajax_obj.no_sources_selected_text) + '</td></tr>'; // Table message
+            if(contentWrapper.length) contentWrapper.removeClass('dsp-loading-overlay');
+            const noSourceMsg = '<div class="dsp-no-deals-message">' + __(dsp_ajax_obj.no_sources_selected_text) + '</div>';
+            const noSourceRow = '<tr class="dsp-no-deals-row"><td colspan="5">' + __(dsp_ajax_obj.no_sources_selected_text) + '</td></tr>';
             if (currentView === 'table') tableBody.empty().html(noSourceRow);
             else gridContainer.empty().html(noSourceMsg);
-            paginationControlsContainer.empty();
+            paginationControlsContainer.empty().removeClass('dsp-loading');
             totalItems = 0; currentPage = 1;
             statusMessage.text(__(dsp_ajax_obj.no_sources_selected_text));
             isLoadingPage = false;
             return;
         }
-
-        isLoadingPage = true;
-        currentPage = pageNum;
-
-        if(contentWrapper.length) contentWrapper.addClass('dsp-loading-overlay'); // Generic overlay class
-        paginationControlsContainer.addClass('dsp-loading');
-        statusMessage.text(__(dsp_ajax_obj.loading_text));
-        if(updateNoticeContainer.length) updateNoticeContainer.slideUp(100);
 
         // Gather filter/sort parameters
         const searchTerm = searchInput.val().trim(); const showNew = newOnlyCheckbox.is(':checked'); const activeSources = checkedSourceCheckboxes.map(function() { return $(this).val(); }).get(); const sortKey = currentSort.key; const sortReverse = currentSort.reverse; const showLtdOnly = ltdOnlyCheckbox.is(':checked'); const minPrice = minPriceInput.val(); const maxPrice = maxPriceInput.val();
@@ -199,18 +189,18 @@ jQuery(document).ready(function($) {
                 const errorMsgRow = '<tr class="dsp-error-row"><td colspan="5">' + __(dsp_ajax_obj.error_text) + '</td></tr>';
                 const errorMsgDiv = '<div class="dsp-error-message">' + __(dsp_ajax_obj.error_text) + '</div>';
                 if (response.success && response.data) {
-                    allDealsData = response.data.deals || [];
-                    totalItems = parseInt(response.data.total_items, 10) || 0;
+                    allDealsData = response.data.deals || []; // Update with processed deals
+                    totalItems = parseInt(response.data.total_items, 10) || 0; // Update total count
                     itemsPerPage = parseInt(response.data.items_per_page, 10) || itemsPerPage;
                     currentPage = parseInt(response.data.current_page, 10) || currentPage;
-                    renderContent(allDealsData); // *** UPDATED: Call generic render function ***
-                    renderPagination();
+                    renderContent(allDealsData); // Render the content
+                    renderPagination(); // Render pagination based on updated totalItems
                     updateLastUpdated(response.data.last_fetch);
                 } else {
                     console.error("DSP: Error fetching deals page:", response);
                     if (currentView === 'table') tableBody.empty().html(errorMsgRow); else gridContainer.empty().html(errorMsgDiv);
                     statusMessage.text(response.data?.message || __(dsp_ajax_obj.error_text)).addClass('dsp-error');
-                    totalItems = 0; renderPagination();
+                    totalItems = 0; renderPagination(); // Clear pagination on error
                 }
             },
             error: function(jqXHR, textStatus, errorThrown) {
@@ -219,13 +209,13 @@ jQuery(document).ready(function($) {
                 const errorMsgDivAjax = '<div class="dsp-error-message">' + __(dsp_ajax_obj.error_text) + ' (AJAX)</div>';
                 if (currentView === 'table') tableBody.empty().html(errorMsgRowAjax); else gridContainer.empty().html(errorMsgDivAjax);
                 statusMessage.text(__(dsp_ajax_obj.error_text) + ' (AJAX)').addClass('dsp-error');
-                totalItems = 0; renderPagination();
+                totalItems = 0; renderPagination(); // Clear pagination on error
             },
             complete: function() {
                 isLoadingPage = false;
                 paginationControlsContainer.removeClass('dsp-loading');
-                if(contentWrapper.length) contentWrapper.removeClass('dsp-loading-overlay'); // Use generic overlay class
-                updateStatusMessage();
+                if(contentWrapper.length) contentWrapper.removeClass('dsp-loading-overlay');
+                updateStatusMessage(); // Update status based on fetched data
             }
         });
     }
@@ -239,7 +229,8 @@ jQuery(document).ready(function($) {
     function createDealRowElement(deal) {
         if (!deal || !deal.title || !deal.link || !deal.first_seen_formatted) { console.warn("DSP: Cannot create row for invalid deal object:", deal); return $(); }
         const isNew = deal.is_new || false; const isLifetime = deal.is_lifetime || false; const firstSeenTimestamp = parseInt(deal.first_seen_ts, 10) || 0;
-        const row = $('<tr></tr>').addClass('dsp-deal-row').attr({'data-source': deal.source || '', 'data-title': deal.title || '', 'data-description': deal.description || '', 'data-is-new': isNew ? '1' : '0', 'data-is-ltd': isLifetime ? '1' : '0', 'data-first-seen': firstSeenTimestamp, 'data-price': deal.price_numeric ?? Infinity, 'data-link': deal.link || '#', 'data-image-url': deal.image_url || ''});
+        const sortablePrice = deal.price_numeric ?? Infinity;
+        const row = $('<tr></tr>').addClass('dsp-deal-row').attr({'data-source': deal.source || '', 'data-title': deal.title || '', 'data-description': deal.description || '', 'data-is-new': isNew ? '1' : '0', 'data-is-ltd': isLifetime ? '1' : '0', 'data-first-seen': firstSeenTimestamp, 'data-price': sortablePrice, 'data-link': deal.link || '#', 'data-image-url': deal.image_url || '', 'data-local-image-src': deal.local_image_src || '', 'data-attachment-id': deal.image_attachment_id || 0 });
         if (isNew) row.addClass('dsp-new-item'); if (isLifetime) row.addClass('dsp-lifetime-item');
         row.append($('<td></td>').addClass('dsp-cell-new').text(isNew ? __(dsp_ajax_obj.yes_text) : __(dsp_ajax_obj.no_text)));
         const titleCell = $('<td></td>').addClass('dsp-cell-title'); const link = $('<a></a>').attr({href: deal.link, target: '_blank', rel: 'noopener noreferrer'}).text(deal.title); titleCell.append(link); if (isLifetime) { titleCell.append(' <span class="dsp-lifetime-badge" title="Lifetime Deal">LTD</span>'); } if (deal.description) { titleCell.append($('<p></p>').addClass('dsp-description').text(deal.description)); } row.append(titleCell);
@@ -247,15 +238,19 @@ jQuery(document).ready(function($) {
         return row;
     }
 
-    // *** NEW: Create grid item element ***
+
     /** Creates a single <div> jQuery element for a grid item */
     function createGridItemElement(deal) {
         if (!deal || !deal.title || !deal.link || !deal.first_seen_formatted) { console.warn("DSP: Cannot create grid item for invalid deal object:", deal); return $(); }
-        const isNew = deal.is_new || false; const isLifetime = deal.is_lifetime || false; const firstSeenTimestamp = parseInt(deal.first_seen_ts, 10) || 0; const imageUrl = deal.image_url || '';
+        const isNew = deal.is_new || false; const isLifetime = deal.is_lifetime || false; const firstSeenTimestamp = parseInt(deal.first_seen_ts, 10) || 0;
+        const externalImageUrl = deal.image_url || '';
+        const localImageSrc = deal.local_image_src || ''; // Get local src from processed data
+        const displayImageUrl = localImageSrc || externalImageUrl; // Prioritize local
+        const sortablePrice = deal.price_numeric ?? Infinity;
 
         const gridItem = $('<div></div>')
             .addClass('dsp-grid-item')
-            .attr({'data-source': deal.source || '', 'data-title': deal.title || '', 'data-description': deal.description || '', 'data-is-new': isNew ? '1' : '0', 'data-is-ltd': isLifetime ? '1' : '0', 'data-first-seen': firstSeenTimestamp, 'data-price': deal.price_numeric ?? Infinity, 'data-link': deal.link || '#', 'data-image-url': imageUrl});
+            .attr({'data-source': deal.source || '', 'data-title': deal.title || '', 'data-description': deal.description || '', 'data-is-new': isNew ? '1' : '0', 'data-is-ltd': isLifetime ? '1' : '0', 'data-first-seen': firstSeenTimestamp, 'data-price': sortablePrice, 'data-link': deal.link || '#', 'data-image-url': externalImageUrl, 'data-local-image-src': localImageSrc, 'data-attachment-id': deal.image_attachment_id || 0 });
 
         if (isNew) gridItem.addClass('dsp-new-item');
         if (isLifetime) gridItem.addClass('dsp-lifetime-item');
@@ -263,23 +258,24 @@ jQuery(document).ready(function($) {
         // Image container
         const imageContainer = $('<div></div>').addClass('dsp-grid-item-image');
         const imageLink = $('<a></a>').attr({href: deal.link, target: '_blank', rel: 'noopener noreferrer'});
-        if (imageUrl) {
-            imageLink.append($('<img>').attr({src: imageUrl, alt: deal.title, loading: 'lazy'}));
+
+        // Use displayImageUrl for src
+        if (displayImageUrl) {
+            imageLink.append($('<img>').attr({src: displayImageUrl, alt: deal.title, loading: 'lazy'}));
         } else {
             imageLink.append($('<span></span>').addClass('dsp-image-placeholder')); // Placeholder
         }
+
         imageContainer.append(imageLink);
         gridItem.append(imageContainer);
 
-        // Content container
+        // Content container (remains the same)
         const contentContainer = $('<div></div>').addClass('dsp-grid-item-content');
         const titleH3 = $('<h3></h3>').addClass('dsp-grid-item-title');
         const titleLink = $('<a></a>').attr({href: deal.link, target: '_blank', rel: 'noopener noreferrer'}).text(deal.title);
         titleH3.append(titleLink);
         if (isLifetime) { titleH3.append(' <span class="dsp-lifetime-badge" title="Lifetime Deal">LTD</span>'); }
         contentContainer.append(titleH3);
-
-        // Meta info
         const metaDiv = $('<div></div>').addClass('dsp-grid-item-meta');
         metaDiv.append($('<span></span>').addClass('dsp-grid-item-price').text(deal.price || 'N/A'));
         metaDiv.append(' | ');
@@ -288,16 +284,12 @@ jQuery(document).ready(function($) {
         metaDiv.append($('<span></span>').addClass('dsp-grid-item-date').text(deal.first_seen_formatted || 'N/A'));
         if (isNew) { metaDiv.append($('<span></span>').addClass('dsp-grid-item-new').text(__(' (New)'))); }
         contentContainer.append(metaDiv);
-
-        // Description (trimmed)
-        if (deal.description) {
-            contentContainer.append($('<p></p>').addClass('dsp-grid-item-description').text(deal.description.substring(0, 100) + (deal.description.length > 100 ? '...' : ''))); // Trim description for grid
-        }
+        if (deal.description) { contentContainer.append($('<p></p>').addClass('dsp-grid-item-description').text(deal.description.substring(0, 100) + (deal.description.length > 100 ? '...' : ''))); }
         gridItem.append(contentContainer);
 
         return gridItem;
     }
-    // *** END NEW ***
+
 
     /** Renders the main content area (Table or Grid) */
     function renderContent(dealsToDisplay) {
@@ -310,7 +302,7 @@ jQuery(document).ready(function($) {
         containerToRender.empty(); // Clear previous content
 
         if (!dealsToDisplay || dealsToDisplay.length === 0) {
-            containerToRender.html(noDealsHTML); // Replace content with the message
+            containerToRender.html(noDealsHTML); // Show 'no deals' message
             return;
         }
 
@@ -331,15 +323,44 @@ jQuery(document).ready(function($) {
 
     /** Renders the pagination controls */
     function renderPagination() {
-        paginationControlsContainer.empty(); if (itemsPerPage <= 0 || totalItems <= itemsPerPage) return; const totalPages = Math.ceil(totalItems / itemsPerPage); if (totalPages <= 1) return;
-        let paginationHTML = '<ul class="dsp-page-numbers">'; paginationHTML += `<li class="dsp-page-item ${currentPage === 1 ? 'dsp-disabled' : ''}">`; paginationHTML += currentPage > 1 ? `<a href="#" class="dsp-page-link dsp-prev" data-page="${currentPage - 1}">« ${__('Previous')}</a>` : `<span class="dsp-page-link dsp-prev">« ${__('Previous')}</span>`; paginationHTML += '</li>'; paginationHTML += `<li class="dsp-page-item dsp-current-page"><span class="dsp-page-link">${sprintf(__(dsp_ajax_obj.page_text), currentPage, totalPages)}</span></li>`; paginationHTML += `<li class="dsp-page-item ${currentPage === totalPages ? 'dsp-disabled' : ''}">`; paginationHTML += currentPage < totalPages ? `<a href="#" class="dsp-page-link dsp-next" data-page="${currentPage + 1}">${__('Next')} »</a>` : `<span class="dsp-page-link dsp-next">${__('Next')} »</span>`; paginationHTML += '</li>'; paginationHTML += '</ul>'; paginationControlsContainer.html(paginationHTML);
+        paginationControlsContainer.empty();
+        if (itemsPerPage <= 0 || totalItems <= itemsPerPage) {
+             console.log(`DSP: Hiding pagination. Total: ${totalItems}, PerPage: ${itemsPerPage}`);
+            return; // Hide if not needed
+        }
+        const totalPages = Math.ceil(totalItems / itemsPerPage);
+        if (totalPages <= 1) {
+             console.log("DSP: Hiding pagination. Only 1 page.");
+             return; // Hide if only one page
+        }
+
+        console.log(`DSP: Rendering pagination. Current: ${currentPage}, Total: ${totalPages}`);
+        let paginationHTML = '<ul class="dsp-page-numbers">';
+        paginationHTML += `<li class="dsp-page-item ${currentPage === 1 ? 'dsp-disabled' : ''}">`;
+        paginationHTML += currentPage > 1 ? `<a href="#" class="dsp-page-link dsp-prev" data-page="${currentPage - 1}">« ${__('Previous')}</a>` : `<span class="dsp-page-link dsp-prev">« ${__('Previous')}</span>`;
+        paginationHTML += '</li>';
+        paginationHTML += `<li class="dsp-page-item dsp-current-page"><span class="dsp-page-link">${sprintf(__(dsp_ajax_obj.page_text), currentPage, totalPages)}</span></li>`;
+        paginationHTML += `<li class="dsp-page-item ${currentPage === totalPages ? 'dsp-disabled' : ''}">`;
+        paginationHTML += currentPage < totalPages ? `<a href="#" class="dsp-page-link dsp-next" data-page="${currentPage + 1}">${__('Next')} »</a>` : `<span class="dsp-page-link dsp-next">${__('Next')} »</span>`;
+        paginationHTML += '</li>';
+        paginationHTML += '</ul>';
+        paginationControlsContainer.html(paginationHTML);
     }
 
     /** Updates the debug log display */
     function updateDebugLog(logMessages) { const noLogText = __('No debug log available.'); if (!logContainer.length || !logPre.length) return; if (logMessages && Array.isArray(logMessages) && logMessages.length > 0) { const escaped = logMessages.map(msg => $('<div>').text(msg).html()); logPre.html(escaped.join('\n')); } else { logPre.text(noLogText); } }
 
     /** Applies filters/sorting by fetching page 1 */
-    function applyFiltersAndSort() { if (!initialLoadComplete) { console.log("DSP: applyFiltersAndSort called before init complete, skipping."); return; } console.log("DSP: Filters/Sort changed, fetching Page 1..."); const sortKey = currentSort.key; const sortReverse = currentSort.reverse; tableHead.find('th').removeClass('dsp-sort-asc dsp-sort-desc'); tableHead.find(`th[data-sort-key="${sortKey}"]`).addClass(sortReverse ? 'dsp-sort-desc' : 'dsp-sort-asc'); fetchDealsPage(1); }
+    function applyFiltersAndSort() {
+        if (!initialLoadComplete) { console.log("DSP: applyFiltersAndSort called before init complete, skipping."); return; }
+        console.log("DSP: Filters/Sort changed, fetching Page 1...");
+        const sortKey = currentSort.key; const sortReverse = currentSort.reverse;
+        // Update visual sort indicators
+        tableHead.find('th').removeClass('dsp-sort-asc dsp-sort-desc');
+        tableHead.find(`th[data-sort-key="${sortKey}"]`).addClass(sortReverse ? 'dsp-sort-desc' : 'dsp-sort-asc');
+        // Fetch page 1 with new filters/sort
+        fetchDealsPage(1);
+    }
 
     /** Gets a comparable value for sorting */
     function getSortValue(deal, key) { if (!deal) return ''; switch (key) { case 'is_new': return deal.is_new ? 1 : 0; case 'title': return (deal.title || '').toLowerCase(); case 'price': return parsePriceForSort(deal.price || ''); case 'price_numeric': return deal.price_numeric ?? Infinity; case 'source': return (deal.source || '').toLowerCase(); case 'first_seen': return parseInt(deal.first_seen_ts, 10) || 0; case 'is_ltd': return deal.is_lifetime ? 1: 0; default: return ''; } }
@@ -373,17 +394,17 @@ jQuery(document).ready(function($) {
         } else {
             // Hide table head if in grid view
             if(tableHead.length) tableHead.hide();
-            // Optionally add sorting controls elsewhere for grid view later
         }
 
         // Debug Log Button
-        if (toggleLogButton.length && logContainer.length && dsp_ajax_obj.show_debug_button && container.find('#dsp-toggle-debug-log').length > 0 ) { // Ensure button exists in DOM
+        if (toggleLogButton.length && logContainer.length && dsp_ajax_obj.show_debug_button && container.find('#dsp-toggle-debug-log').length > 0 ) {
             toggleLogButton.on('click', function () { const button = $(this); const showTxt = __(dsp_ajax_obj.show_log_text); const hideTxt = __(dsp_ajax_obj.hide_log_text); logContainer.slideToggle(200, function() { button.text(logContainer.is(':visible') ? hideTxt : showTxt); }); });
         } else { if(logContainer.length) logContainer.hide(); if(toggleLogButton.length) toggleLogButton.hide(); }
 
         // Refresh Button
-        if (refreshButton.length && container.find('#dsp-refresh-button').length > 0) { // Ensure button exists
-            refreshButton.on('click', function () { if (isRefreshing || isLoadingPage) return; isRefreshing = true; const refreshingText = __(dsp_ajax_obj.refreshing_text); const refreshFinishedText = __(dsp_ajax_obj.refresh_finished_text); const refreshFailedInvalidResp = __(dsp_ajax_obj.error_refresh_invalid_resp_text); const refreshFailedAjax = __(dsp_ajax_obj.error_refresh_ajax_text); const button = $(this); button.prop('disabled', true); if(refreshSpinner.length) refreshSpinner.css('visibility', 'visible'); if(refreshMessage.length) refreshMessage.text(refreshingText).removeClass('dsp-error dsp-success'); if(logPre.length && dsp_ajax_obj.show_debug_button) logPre.text('Running manual refresh...'); statusMessage.text(refreshingText).removeClass('dsp-success dsp-error'); const contentWrapper = (currentView === 'table') ? tableWrapper : gridContainer; if(contentWrapper.length) contentWrapper.addClass('dsp-loading-overlay'); $.ajax({ url: dsp_ajax_obj.ajax_url, type: 'POST', data: { action: 'dsp_refresh_deals', nonce: dsp_ajax_obj.nonce }, timeout: 180000, success: function (response) { console.log("DSP: Manual refresh response:", response); let message = refreshFailedInvalidResp; let messageType = 'dsp-error'; if (response.success && response.data) { totalItems = parseInt(response.data.total_items, 10) || 0; currentPage = 1; const allDealsFromServer = response.data.deals || []; updateLastUpdated(response.data.last_fetch); if(logPre.length && dsp_ajax_obj.show_debug_button) updateDebugLog(response.data.log); message = response.data.message || refreshFinishedText; messageType = message.toLowerCase().includes('error') || message.toLowerCase().includes('fail') ? 'dsp-error' : 'dsp-success'; allDealsData = allDealsFromServer.slice(0, itemsPerPage); renderContent(allDealsData); renderPagination(); } else { console.error("DSP Refresh Error:", response); const logData = response.data?.log || [message]; if(logPre.length && dsp_ajax_obj.show_debug_button) updateDebugLog(logData); message = response.data?.message || message; statusMessage.text(message).addClass('dsp-error'); renderContent([]); totalItems = 0; renderPagination(); } if(refreshMessage.length) refreshMessage.text(message).removeClass('dsp-error dsp-success').addClass(messageType); }, error: function (jqXHR, textStatus, errorThrown) { console.error("DSP AJAX Refresh Error:", textStatus, errorThrown, jqXHR.responseJSON); let errorMsg = refreshFailedAjax; let logData = [errorMsg, `Status: ${textStatus}`, `Error: ${errorThrown}`]; if (jqXHR.responseJSON?.data) { errorMsg = jqXHR.responseJSON.data.message || errorMsg; logData = jqXHR.responseJSON.data.log || logData; } if (jqXHR.responseText) { logData.push("Raw Response Snippet: " + jqXHR.responseText.substring(0, 500)); } if(logPre.length && dsp_ajax_obj.show_debug_button) updateDebugLog(logData); if(refreshMessage.length) refreshMessage.text(errorMsg).addClass('dsp-error'); statusMessage.text(errorMsg).addClass('dsp-error'); renderContent([]); totalItems = 0; renderPagination(); }, complete: function () { isRefreshing = false; button.prop('disabled', false); if(refreshSpinner.length) refreshSpinner.css('visibility', 'hidden'); if(refreshMessage.length) { const delay = refreshMessage.hasClass('dsp-error') ? 10000 : 5000; setTimeout(() => { refreshMessage.text('').removeClass('dsp-error dsp-success'); }, delay); } if(contentWrapper.length) contentWrapper.removeClass('dsp-loading-overlay'); updateStatusMessage(); } }); });
+        if (refreshButton.length && container.find('#dsp-refresh-button').length > 0) {
+            refreshButton.on('click', function () { if (isRefreshing || isLoadingPage) return; isRefreshing = true; const refreshingText = __(dsp_ajax_obj.refreshing_text); const refreshFinishedText = __(dsp_ajax_obj.refresh_finished_text); const refreshFailedInvalidResp = __(dsp_ajax_obj.error_refresh_invalid_resp_text); const refreshFailedAjax = __(dsp_ajax_obj.error_refresh_ajax_text); const button = $(this); button.prop('disabled', true); if(refreshSpinner.length) refreshSpinner.css('visibility', 'visible'); if(refreshMessage.length) refreshMessage.text(refreshingText).removeClass('dsp-error dsp-success'); if(logPre.length && dsp_ajax_obj.show_debug_button) logPre.text('Running manual refresh...'); statusMessage.text(refreshingText).removeClass('dsp-success dsp-error'); const contentWrapper = (currentView === 'table') ? tableWrapper : gridContainer; if(contentWrapper.length) contentWrapper.addClass('dsp-loading-overlay'); $.ajax({ url: dsp_ajax_obj.ajax_url, type: 'POST', data: { action: 'dsp_refresh_deals', nonce: dsp_ajax_obj.nonce }, timeout: 180000, success: function (response) { console.log("DSP: Manual refresh response:", response); let message = refreshFailedInvalidResp; let messageType = 'dsp-error'; if (response.success && response.data) { totalItems = parseInt(response.data.total_items, 10) || 0; currentPage = 1; const allDealsFromServer = response.data.deals || []; updateLastUpdated(response.data.last_fetch); if(logPre.length && dsp_ajax_obj.show_debug_button) updateDebugLog(response.data.log); message = response.data.message || refreshFinishedText; messageType = message.toLowerCase().includes('error') || message.toLowerCase().includes('fail') ? 'dsp-error' : 'dsp-success'; allDealsData = allDealsFromServer.slice(0, itemsPerPage); // Show first page after refresh
+                renderContent(allDealsData); renderPagination(); } else { console.error("DSP Refresh Error:", response); const logData = response.data?.log || [message]; if(logPre.length && dsp_ajax_obj.show_debug_button) updateDebugLog(logData); message = response.data?.message || message; statusMessage.text(message).addClass('dsp-error'); renderContent([]); totalItems = 0; renderPagination(); } if(refreshMessage.length) refreshMessage.text(message).removeClass('dsp-error dsp-success').addClass(messageType); }, error: function (jqXHR, textStatus, errorThrown) { console.error("DSP AJAX Refresh Error:", textStatus, errorThrown, jqXHR.responseJSON); let errorMsg = refreshFailedAjax; let logData = [errorMsg, `Status: ${textStatus}`, `Error: ${errorThrown}`]; if (jqXHR.responseJSON?.data) { errorMsg = jqXHR.responseJSON.data.message || errorMsg; logData = jqXHR.responseJSON.data.log || logData; } if (jqXHR.responseText) { logData.push("Raw Response Snippet: " + jqXHR.responseText.substring(0, 500)); } if(logPre.length && dsp_ajax_obj.show_debug_button) updateDebugLog(logData); if(refreshMessage.length) refreshMessage.text(errorMsg).addClass('dsp-error'); statusMessage.text(errorMsg).addClass('dsp-error'); renderContent([]); totalItems = 0; renderPagination(); }, complete: function () { isRefreshing = false; button.prop('disabled', false); if(refreshSpinner.length) refreshSpinner.css('visibility', 'hidden'); if(refreshMessage.length) { const delay = refreshMessage.hasClass('dsp-error') ? 10000 : 5000; setTimeout(() => { refreshMessage.text('').removeClass('dsp-error dsp-success'); }, delay); } if(contentWrapper.length) contentWrapper.removeClass('dsp-loading-overlay'); updateStatusMessage(); } }); });
         }
 
         // Donate Modal
